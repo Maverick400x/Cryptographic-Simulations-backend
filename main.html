@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptography Techniques</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .menu {
+            display: grid;
+            grid-template-columns: repeat(2, 220px);
+            gap: 20px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 0 10px rgba(0,0,0,0.4);
+        }
+
+        .card:hover {
+            background: #334155;
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>🔐 Cryptography Visualizer</h1>
+
+    <div class="menu">
+        <a href="/cipher.html">
+            <div class="card">
+                <h3>Caesar Cipher</h3>
+                <p>Simple substitution cipher</p>
+            </div>
+        </a>
+
+        <!--Modes of Cipher Blocks-->
+                <!-- DES -->
+        <a href="/MOCB.html">
+            <div class="card">
+                <h3>Cipher Blocks</h3>
+                <p>Modes of Cipher Blocks</p>
+            </div>
+        </a>
+
+        <!-- DES -->
+        <a href="/des.html">
+            <div class="card">
+                <h3>DES</h3>
+                <p>Data Encryption Standard</p>
+            </div>
+        </a>
+
+        <!-- AES -->
+        <a href="/aes">
+            <div class="card">
+                <h3>AES</h3>
+                <p>Advanced Encryption Standard</p>
+            </div>
+        </a>
+
+
+
+        <!-- Blowfish -->
+        <a href="/blowfish">
+            <div class="card">
+                <h3>Blowfish</h3>
+                <p>Fast symmetric encryption</p>
+            </div>
+        </a>
+
+        <!-- RSA -->
+        <a href="/rsa">
+            <div class="card">
+                <h3>RSA</h3>
+                <p>Public key encryption</p>
+            </div>
+        </a>
+
+        <!-- Diffie-Hellman -->
+        <a href="/diffie">
+            <div class="card">
+                <h3>Diffie-Hellman</h3>
+                <p>Key exchange algorithm</p>
+            </div>
+        </a>
+
+        <!-- Hashing -->
+        <a href="/hashing">
+            <div class="card">
+                <h3>Hashing</h3>
+                <p>One-way data transformation</p>
+            </div>
+        </a>
+
+        <!-- SHA-256 -->
+        <a href="/sha256">
+            <div class="card">
+                <h3>SHA-256</h3>
+                <p>Secure hash algorithm (256-bit)</p>
+            </div>
+        </a>
+
+        <!-- SHA-512 -->
+        <a href="/sha512">
+            <div class="card">
+                <h3>SHA-512</h3>
+                <p>Secure hash algorithm (512-bit)</p>
+            </div>
+        </a>
+
+    </div>
+</div>
+
+</body>
+</html>
