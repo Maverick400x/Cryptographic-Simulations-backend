@@ -1,152 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cryptography Techniques</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryptography Visualizer</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-        }
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #020617, #0f172a, #020617);
+    color: #e2e8f0;
+    overflow-x: hidden;
+}
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
+/* Animated background particles */
+body::before {
+    content: "";
+    position: fixed;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(56,189,248,0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: moveBg 20s linear infinite;
+    z-index: 0;
+}
 
-        h1 {
-            margin-bottom: 30px;
-        }
+@keyframes moveBg {
+    from { transform: translate(0,0); }
+    to { transform: translate(-50px,-50px); }
+}
 
-        .menu {
-            display: grid;
-            grid-template-columns: repeat(2, 220px);
-            gap: 20px;
-        }
+.container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 50px 20px;
+}
 
-        .card {
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 0 10px rgba(0,0,0,0.4);
-        }
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #38bdf8, #22c55e);
+    -webkit-background-clip: text;
+    color: transparent;
+}
 
-        .card:hover {
-            background: #334155;
-            transform: translateY(-5px);
-        }
+.subtitle {
+    color: #94a3b8;
+    margin-bottom: 40px;
+}
 
-        .card h3 {
-            margin-bottom: 10px;
-        }
+/* Grid */
+.menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+    max-width: 1000px;
+    margin: auto;
+}
 
-        .card p {
-            font-size: 14px;
-            color: #94a3b8;
-        }
+/* Glass card */
+.card {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(12px);
+    padding: 25px;
+    border-radius: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    border: 1px solid rgba(148,163,184,0.2);
+    position: relative;
+    overflow: hidden;
+}
 
-        a {
-            text-decoration: none;
-            color: inherit;
-        }
-    </style>
+/* Glow effect */
+.card::before {
+    content: "";
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    background: linear-gradient(120deg, transparent, rgba(56,189,248,0.3), transparent);
+    top: -10%;
+    left: -10%;
+    opacity: 0;
+    transition: 0.5s;
+}
+
+.card:hover::before {
+    opacity: 1;
+    transform: rotate(25deg);
+}
+
+/* Hover animation */
+.card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 0 25px rgba(56,189,248,0.3);
+}
+
+/* Icon animation */
+.card span {
+    font-size: 30px;
+    display: block;
+    margin-bottom: 10px;
+    transition: 0.3s;
+}
+
+.card:hover span {
+    transform: rotate(10deg) scale(1.2);
+}
+
+.card h3 {
+    margin-bottom: 8px;
+}
+
+.card p {
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Fade animation */
+.card {
+    animation: fadeInUp 0.8s ease forwards;
+    opacity: 0;
+}
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }
+.card:nth-child(5) { animation-delay: 0.5s; }
+.card:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+</style>
 </head>
 
 <body>
 
 <div class="container">
     <h1>🔐 Cryptography Visualizer</h1>
+    <p class="subtitle">Interactive Simulation of Encryption Techniques</p>
 
     <div class="menu">
+
         <a href="/cipher.html">
             <div class="card">
+                <span>🔤</span>
                 <h3>Caesar Cipher</h3>
-                <p>Simple substitution cipher</p>
+                <p>Basic substitution encryption</p>
             </div>
         </a>
 
-        <!--Modes of Cipher Blocks-->
-                <!-- DES -->
         <a href="/MOCB.html">
             <div class="card">
-                <h3>Cipher Blocks</h3>
-                <p>Modes of Cipher Blocks</p>
+                <span>🔗</span>
+                <h3>Block Modes</h3>
+                <p>ECB, CBC, CFB, OFB, CTR</p>
             </div>
         </a>
 
-        <!-- DES -->
         <a href="/des.html">
             <div class="card">
+                <span>🧩</span>
                 <h3>DES</h3>
-                <p>Data Encryption Standard</p>
+                <p>Classic symmetric encryption</p>
             </div>
         </a>
 
-        <!-- AES -->
         <a href="/aes">
             <div class="card">
+                <span>⚡</span>
                 <h3>AES</h3>
-                <p>Advanced Encryption Standard</p>
+                <p>Modern secure encryption</p>
             </div>
         </a>
 
-
-
-        <!-- Blowfish -->
         <a href="/blowfish">
             <div class="card">
+                <span>🐟</span>
                 <h3>Blowfish</h3>
-                <p>Fast symmetric encryption</p>
+                <p>Fast block cipher</p>
             </div>
         </a>
 
-        <!-- RSA -->
         <a href="/rsa">
             <div class="card">
+                <span>🔑</span>
                 <h3>RSA</h3>
-                <p>Public key encryption</p>
+                <p>Public-key cryptography</p>
             </div>
         </a>
 
-        <!-- Diffie-Hellman -->
         <a href="/diffie">
             <div class="card">
+                <span>🤝</span>
                 <h3>Diffie-Hellman</h3>
-                <p>Key exchange algorithm</p>
+                <p>Secure key exchange</p>
             </div>
         </a>
 
-        <!-- Hashing -->
         <a href="/hashing">
             <div class="card">
+                <span>#️⃣</span>
                 <h3>Hashing</h3>
-                <p>One-way data transformation</p>
+                <p>One-way transformation</p>
             </div>
         </a>
 
-        <!-- SHA-256 -->
         <a href="/sha256">
             <div class="card">
+                <span>🔒</span>
                 <h3>SHA-256</h3>
-                <p>Secure hash algorithm (256-bit)</p>
+                <p>256-bit hashing</p>
             </div>
         </a>
 
-        <!-- SHA-512 -->
         <a href="/sha512">
             <div class="card">
+                <span>🛡️</span>
                 <h3>SHA-512</h3>
-                <p>Secure hash algorithm (512-bit)</p>
+                <p>512-bit hashing</p>
             </div>
         </a>
 
