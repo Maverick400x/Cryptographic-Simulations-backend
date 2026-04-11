@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cipher Visualizer Pro++</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg:      #0a0c10;
+    --surface: #111418;
+    --card:    #161b22;
+    --border:  #21262d;
+    --accent:  #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #a8ff3e;
+    --accent4: #bf5af2;
+    --accent5: #ffd60a;
+    --green:   #a8ff3e;
+    --yellow:  #ffd60a;
+    --red:     #ff6b35;
+    --muted:   #7d8590;
+    --text:    #e6edf3;
+    --mono:    'Share Tech Mono', monospace;
+    --sans:    'Syne', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* MOCB-style grid background */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── LEFT PANEL ── */
+.left {
+    width: 300px;
+    min-width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 20px;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* Brand / Header */
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.brand-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent4));
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    border: 1px solid rgba(0,229,255,0.3);
+}
+.brand-title {
+    font-size: 15px; font-weight: 800; color: var(--text);
+    letter-spacing: 1px;
+    line-height: 1.2;
+}
+.brand-sub {
+    font-family: var(--mono);
+    font-size: 10px; color: var(--accent); letter-spacing: 2px;
+    text-transform: uppercase; margin-top: 2px;
+}
+
+/* Fields */
+.field { margin-bottom: 14px; }
+.field label {
+    display: block; font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px;
+}
+.field input, .field select, .field textarea {
+    width: 100%; padding: 10px 12px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--card);
+    color: var(--text); font-family: var(--mono); font-size: 13px;
+    transition: border-color 0.2s; resize: none; outline: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+}
+.field select option   { background: var(--card); }
+.field select optgroup { color: var(--muted); font-size: 11px; }
+
+/* Method info */
+.method-info {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 12px; font-size: 11px;
+    color: var(--muted); line-height: 1.65; margin-bottom: 14px;
+    min-height: 44px; font-family: var(--mono);
+}
+
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* Run button */
+.run-btn {
+    width: 100%; padding: 12px; border-radius: 6px; border: none;
+    background: var(--accent);
+    color: var(--bg); font-family: var(--sans); font-weight: 800;
+    font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+}
+.run-btn:hover  { opacity: 0.85; }
+.run-btn:active { transform: scale(0.98); }
+
+/* Output chip */
+.output-chip {
+    margin-top: 16px; background: var(--card);
+    border: 1px solid var(--yellow); border-radius: 8px;
+    padding: 14px; display: none;
+    position: relative; overflow: hidden;
+}
+.output-chip::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: var(--yellow);
+}
+.output-chip .lbl {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 5px;
+}
+.output-chip .plain-val {
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+    margin-bottom: 10px; word-break: break-all;
+}
+.output-chip .cipher-val {
+    font-family: var(--mono); font-size: 18px; font-weight: 700;
+    color: var(--yellow); word-break: break-all; min-height: 26px; letter-spacing: 2px;
+}
+
+/* ── RIGHT PANEL ── */
+.right { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 1; }
+
+.right-header {
+    padding: 20px 28px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    background: var(--surface);
+}
+.right-header h2 {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--accent); letter-spacing: 3px; text-transform: uppercase;
+}
+.step-count {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3px 10px;
+}
+
+.steps-area { flex: 1; overflow-y: auto; padding: 20px 28px; }
+
+/* ── STEP CARD — per-char ── */
+.step-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    display: grid; grid-template-columns: 80px 1fr 24px 1fr;
+    align-items: center; gap: 12px;
+    animation: slideIn 0.32s ease forwards; opacity: 0;
+    position: relative; overflow: hidden;
+}
+.step-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--accent); opacity: 0.4;
+}
+.step-card.wide { grid-template-columns: 80px 1fr 24px 1fr; }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(14px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.step-idx {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3px 6px; text-align: center;
+}
+.step-orig { font-family: var(--mono); font-size: 22px; color: var(--text); text-align: center; }
+.step-enc  { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--accent3); text-align: center; }
+.step-arrow { text-align: center; color: var(--accent); font-size: 16px; }
+.step-meta { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; margin-top: 3px; }
+
+/* ── RSA grid ── */
+.rsa-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+.rsa-cell {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; text-align: center; min-width: 60px;
+    animation: slideIn 0.3s ease forwards; opacity: 0;
+    transition: border-color 0.2s;
+}
+.rsa-cell:hover { border-color: var(--accent); }
+.rc-orig { font-family: var(--mono); font-size: 18px; color: var(--text); }
+.rc-arr  { font-size: 11px; color: var(--muted); margin: 2px 0; }
+.rc-enc  { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent2); }
+
+/* ── Rail fence ── */
+.rail-wrap { overflow-x: auto; padding: 8px 0; }
+.rail-table { border-collapse: collapse; font-family: var(--mono); font-size: 15px; }
+.rail-table td { width: 30px; height: 30px; text-align: center; border: 1px solid rgba(255,255,255,0.05); color: var(--muted); }
+.rail-table td.on { color: var(--accent3); font-weight: 700; background: rgba(168,255,62,0.07); }
+
+/* ── Playfair grid ── */
+.pf-grid { display: grid; grid-template-columns: repeat(5, 32px); gap: 3px; margin-bottom: 16px; }
+.pf-cell {
+    width: 32px; height: 32px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+    transition: border-color 0.2s;
+}
+.pf-cell.hl { background: rgba(0,229,255,0.1); color: var(--accent); border-color: var(--accent); }
+
+/* ── Pair cards (Playfair, Hill) ── */
+.pair-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    display: grid; grid-template-columns: 80px 1fr 24px 1fr;
+    align-items: center; gap: 12px;
+    animation: slideIn 0.32s ease forwards; opacity: 0;
+    position: relative; overflow: hidden;
+}
+.pair-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--accent4); opacity: 0.5;
+}
+.pair-orig { font-family: var(--mono); font-size: 20px; color: var(--text); }
+.pair-enc  { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--accent3); }
+.hill-meta { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* ── Section head ── */
+.sec-head {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+/* ── Placeholder ── */
+.placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; gap: 12px; color: var(--muted);
+}
+.placeholder-icon { font-size: 44px; opacity: 0.2; }
+.placeholder-text { font-family: var(--mono); font-size: 12px; letter-spacing: 2px; }
+
+/* ── Toast ── */
+.toast {
+    position: fixed; top: 18px; right: 18px;
+    background: rgba(255,107,53,0.15); border: 1px solid var(--accent2); color: var(--accent2);
+    padding: 10px 16px; border-radius: 6px; font-size: 12px; font-family: var(--mono);
+    z-index: 1000; opacity: 0; transform: translateY(-6px);
+    transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── Footer ── */
+footer {
+    text-align: center;
+    padding: 14px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    position: relative; z-index: 1;
+    flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="container">
+
+<!-- ── LEFT ── -->
+<div class="left">
+
+    <div class="brand">
+        <div class="brand-icon">🔐</div>
+        <div>
+            <div class="brand-title">CIPHERLAB</div>
+            <div class="brand-sub">Encryption Visualizer</div>
+        </div>
+    </div>
+
+    <div class="field">
+        <label>Plain Text</label>
+        <textarea id="text" rows="3" placeholder="Enter text to encrypt…"></textarea>
+    </div>
+
+    <div class="field">
+        <label>Cipher Type</label>
+        <select id="method" onchange="onMethodChange()">
+            <optgroup label="── Substitution ──">
+                <option value="caesar">Caesar</option>
+                <option value="atbash">Atbash</option>
+                <option value="rot13">ROT13</option>
+                <option value="vigenere">Vigenère</option>
+                <option value="beaufort">Beaufort</option>
+                <option value="playfair">Playfair</option>
+            </optgroup>
+            <optgroup label="── Matrix ──">
+                <option value="hill">Hill (2×2)</option>
+            </optgroup>
+            <optgroup label="── Transposition ──">
+                <option value="railfence">Rail Fence</option>
+            </optgroup>
+            <optgroup label="── Asymmetric ──">
+                <option value="rsa">RSA (Demo)</option>
+            </optgroup>
+        </select>
+    </div>
+
+    <div class="method-info" id="methodInfo"></div>
+
+    <div class="field" id="shiftField">
+        <label>Shift Amount</label>
+        <input type="number" id="shift" value="3" min="1" max="25">
+    </div>
+
+    <div class="field" id="keyField" style="display:none;">
+        <label id="keyLabel">Key</label>
+        <input type="text" id="key" placeholder="e.g. KEYWORD">
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="run-btn" onclick="runEncrypt()">▶ Run Simulation</button>
+
+    <div class="output-chip" id="outputChip">
+        <div class="lbl">Input</div>
+        <div class="plain-val" id="chipPlain"></div>
+        <div class="lbl">Cipher Output</div>
+        <div class="cipher-val" id="chipCipher"></div>
+    </div>
+
+</div>
+
+<!-- ── RIGHT ── -->
+<div class="right">
+    <div class="right-header">
+        <h2>// Transformation Flow</h2>
+        <span class="step-count" id="stepCount"></span>
+    </div>
+    <div class="steps-area" id="stepsArea">
+        <div class="placeholder">
+            <div class="placeholder-icon">⚙</div>
+            <div class="placeholder-text">select a cipher and run</div>
+        </div>
+    </div>
+    <footer>
+        <div> Ciphers · educational simulation</div>
+    </footer>
+</div>
+
+</div>
+
+<script>
+const CFG = {
+    caesar:    { info:"Shifts each letter forward by a fixed number in the alphabet.", shift:true,  key:false },
+    atbash:    { info:"Mirrors the alphabet: A↔Z, B↔Y. No key needed.",              shift:false, key:false },
+    rot13:     { info:"Caesar with shift=13. Self-inverse: ROT13(ROT13(x)) = x.",    shift:false, key:false },
+    vigenere:  { info:"Repeating keyword applies variable per-letter shifts.",        shift:false, key:true,  kl:"Keyword (letters only)" },
+    beaufort:  { info:"Reciprocal cipher: C = (KeyChar − PlainChar) mod 26.",        shift:false, key:true,  kl:"Keyword" },
+    playfair:  { info:"Encrypts digraphs via a 5×5 key square. I and J are merged.", shift:false, key:true,  kl:"Keyword for key square" },
+    hill:      { info:"2×2 matrix cipher. Key = 4 digits, e.g. 3325 → [[3,3],[2,5]].",shift:false,key:true,  kl:"Matrix digits (4 nums e.g. 3325)" },
+    railfence: { info:"Text written in zigzag across 3 rails, read row by row.",     shift:false, key:false },
+    rsa:       { info:"Demo RSA: e=5, n=91. Each char → (ASCII^e) mod 91.",          shift:false, key:false },
+};
+
+function onMethodChange() {
+    const m = CFG[document.getElementById("method").value];
+    document.getElementById("methodInfo").textContent = m.info;
+    document.getElementById("shiftField").style.display = m.shift ? "" : "none";
+    document.getElementById("keyField").style.display   = m.key   ? "" : "none";
+    if (m.key) document.getElementById("keyLabel").textContent = m.kl || "Key";
+}
+onMethodChange();
+
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+function scramble(el, final) {
+    const ch = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#@!%";
+    let it = 0;
+    const iv = setInterval(() => {
+        el.textContent = final.split("").map((c, i) =>
+            i < it ? final[i] : ch[Math.floor(Math.random() * ch.length)]
+        ).join("");
+        if (it >= final.length) clearInterval(iv);
+        it += 0.5;
+    }, 25);
+}
+
+function railHTML(text, rails = 3) {
+    const pat = []; let r = 0, d = 1;
+    for (let i = 0; i < text.length; i++) {
+        pat.push(r); r += d;
+        if (r === 0 || r === rails - 1) d *= -1;
+    }
+    let h = '<div class="rail-wrap"><table class="rail-table">';
+    for (let row = 0; row < rails; row++) {
+        h += "<tr>";
+        for (let i = 0; i < text.length; i++)
+            h += `<td class="${pat[i]===row?'on':''}">${pat[i]===row?text[i]:''}</td>`;
+        h += "</tr>";
+    }
+    return h + "</table></div>";
+}
+
+function buildPFLetters(key) {
+    key = key.toUpperCase().replace(/J/g,"I");
+    const seen = [];
+    for (const c of key + "ABCDEFGHIKLMNOPQRSTUVWXYZ")
+        if (/[A-Z]/.test(c) && !seen.includes(c)) seen.push(c);
+    return seen;
+}
+
+function pfGridHTML(letters, hl = []) {
+    const hlSet = new Set(hl.map(c => c.toUpperCase().replace("J","I")));
+    return '<div class="pf-grid">' +
+        letters.map(c => `<div class="pf-cell${hlSet.has(c)?' hl':''}">${c}</div>`).join("") +
+        '</div>';
+}
+
+async function runEncrypt() {
+    const text   = document.getElementById("text").value.trim();
+    const method = document.getElementById("method").value;
+    const shift  = parseInt(document.getElementById("shift").value) || 3;
+    const key    = document.getElementById("key").value.trim();
+
+    if (!text) { showToast("Enter some text first"); return; }
+    if (["vigenere","beaufort","playfair"].includes(method) && !key)
+        { showToast("This cipher requires a keyword"); return; }
+    if (method === "hill" && key.replace(/\D/g,"").length < 4)
+        { showToast("Hill cipher needs 4 digits as key (e.g. 3325)"); return; }
+
+    const area = document.getElementById("stepsArea");
+    area.innerHTML = '<div class="placeholder"><div class="placeholder-text">encrypting…</div></div>';
+    document.getElementById("outputChip").style.display = "none";
+    document.getElementById("stepCount").textContent = "";
+
+    let data;
+    try {
+        const res = await fetch("http://127.0.0.1:8000/encrypt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, shift, method, key })
+        });
+        if (!res.ok) throw new Error();
+        data = await res.json();
+    } catch {
+        showToast("Backend unreachable — start server on port 8000");
+        area.innerHTML = '<div class="placeholder"><div class="placeholder-icon">✕</div><div class="placeholder-text">connection failed</div></div>';
+        return;
+    }
+
+    area.innerHTML = "";
+
+    // RSA
+    if (method === "rsa") {
+        document.getElementById("stepCount").textContent = `${data.steps.length} chars`;
+        const wrap = document.createElement("div"); wrap.className = "rsa-grid";
+        data.steps.forEach((s, i) => {
+            const c = document.createElement("div");
+            c.className = "rsa-cell"; c.style.animationDelay = `${i*35}ms`;
+            c.innerHTML = `<div class="rc-orig">${s.original}</div><div class="rc-arr">↓ e=5 n=91</div><div class="rc-enc">${s.shifted}</div>`;
+            wrap.appendChild(c);
+        });
+        area.appendChild(wrap);
+    }
+
+    // Rail Fence
+    else if (method === "railfence") {
+        document.getElementById("stepCount").textContent = "3 rails";
+        const sec = document.createElement("div");
+        sec.innerHTML = `<div class="sec-head">Rail pattern</div>${railHTML(text)}`;
+        area.appendChild(sec);
+        const card = document.createElement("div");
+        card.className = "pair-card"; card.style.marginTop = "16px";
+        card.innerHTML = `<div class="step-idx">OUTPUT</div><div class="pair-orig" style="font-size:15px;">${text}</div><div class="step-arrow">→</div><div class="pair-enc" style="font-size:15px;">${data.output}</div>`;
+        area.appendChild(card);
+    }
+
+    // Playfair
+    else if (method === "playfair") {
+        document.getElementById("stepCount").textContent = `${data.steps.length} digraphs`;
+        const letters = buildPFLetters(key);
+        const pfsec = document.createElement("div");
+        pfsec.innerHTML = `<div class="sec-head">Key square for "${key.toUpperCase()}"</div>${pfGridHTML(letters)}`;
+        area.appendChild(pfsec);
+        data.steps.forEach((s, i) => {
+            setTimeout(() => {
+                const card = document.createElement("div"); card.className = "pair-card";
+                card.innerHTML = `<div class="step-idx">PAIR ${i+1}</div><div class="pair-orig">${s.original}</div><div class="step-arrow">→</div><div class="pair-enc">${s.shifted}</div>`;
+                area.appendChild(card); area.scrollTop = area.scrollHeight;
+            }, i * 270);
+        });
+    }
+
+    // Hill
+    else if (method === "hill") {
+        document.getElementById("stepCount").textContent = `${data.steps.length} digraphs`;
+        data.steps.forEach((s, i) => {
+            setTimeout(() => {
+                const card = document.createElement("div"); card.className = "pair-card";
+                card.innerHTML = `
+                    <div class="step-idx">PAIR ${i+1}</div>
+                    <div><div class="pair-orig">${s.original}</div><div class="hill-meta">${s.vector||""}</div></div>
+                    <div class="step-arrow">→</div>
+                    <div class="pair-enc">${s.shifted}</div>
+                `;
+                area.appendChild(card); area.scrollTop = area.scrollHeight;
+            }, i * 270);
+        });
+    }
+
+    // All per-char ciphers
+    else {
+        document.getElementById("stepCount").textContent = `${data.steps.length} chars`;
+        data.steps.forEach((s, i) => {
+            setTimeout(() => {
+                const isAlpha = /[a-zA-Z]/.test(s.original);
+                const card = document.createElement("div"); card.className = "step-card";
+                const opLabel = method==="atbash"?"mirror" : method==="rot13"?"+13" : method==="beaufort"?"(k−p)%26" : method==="vigenere"?"key shift" : `+${shift}`;
+                card.innerHTML = `
+                    <div class="step-idx">${i+1} / ${data.steps.length}</div>
+                    <div>
+                        <div class="step-orig">${s.original}</div>
+                        ${isAlpha ? `<div class="step-meta">ASCII ${s.original.charCodeAt(0)}</div>` : `<div class="step-meta">pass-through</div>`}
+                    </div>
+                    <div class="step-arrow" title="${opLabel}">→</div>
+                    <div>
+                        <div class="step-enc">${s.shifted}</div>
+                        ${isAlpha ? `<div class="step-meta">ASCII ${s.shifted.charCodeAt(0)}</div>` : ""}
+                    </div>
+                `;
+                area.appendChild(card); area.scrollTop = area.scrollHeight;
+            }, i * 210);
+        });
+    }
+
+    // Output chip
+    const delay = (method==="rsa"||method==="railfence") ? 500
+                : (method==="playfair"||method==="hill") ? data.steps.length*270+300
+                : data.steps.length*210+300;
+
+    setTimeout(() => {
+        const chip = document.getElementById("outputChip");
+        chip.style.display = "block";
+        document.getElementById("chipPlain").textContent = data.input;
+        scramble(document.getElementById("chipCipher"), data.output);
+    }, delay);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modes of Cipher Blocks</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111418;
+      --card: #161b22;
+      --border: #21262d;
+      --accent: #00e5ff;
+      --accent2: #ff6b35;
+      --accent3: #a8ff3e;
+      --accent4: #bf5af2;
+      --accent5: #ffd60a;
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND GRID ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── HEADER ── */
+    header {
+      padding: 60px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .header-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -1px;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 13px;
+      margin-top: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .tab {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 8px 18px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { border-color: var(--accent); color: var(--accent); }
+
+    .tab.active {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ── PANEL ── */
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── MODE CARD ── */
+    .mode-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mode-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .mode-card[data-accent="cyan"]::before   { background: var(--accent); }
+    .mode-card[data-accent="orange"]::before { background: var(--accent2); }
+    .mode-card[data-accent="green"]::before  { background: var(--accent3); }
+    .mode-card[data-accent="purple"]::before { background: var(--accent4); }
+    .mode-card[data-accent="yellow"]::before { background: var(--accent5); }
+    .mode-card[data-accent="pink"]::before   { background: #ff2d78; }
+
+    .mode-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .mode-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .mode-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+
+    .badge-deterministic { color: var(--accent2); border-color: var(--accent2); background: rgba(255,107,53,0.1); }
+    .badge-probabilistic  { color: var(--accent3); border-color: var(--accent3); background: rgba(168,255,62,0.1); }
+    .badge-stream         { color: var(--accent4); border-color: var(--accent4); background: rgba(191,90,242,0.1); }
+    .badge-legacy         { color: var(--muted);   border-color: var(--border);   background: rgba(255,255,255,0.04); }
+
+    .mode-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+
+    /* ── DIAGRAM ── */
+    .diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    svg.cipher-diagram { display: block; min-width: 480px; }
+
+    /* ── PROPERTIES GRID ── */
+    .props {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .prop-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .prop-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .prop-value {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .prop-yes  { color: var(--accent3); }
+    .prop-no   { color: var(--accent2); }
+    .prop-na   { color: var(--muted); }
+
+    /* ── INTERACTIVE DEMO ── */
+    .demo-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .demo-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .demo-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .demo-input {
+      flex: 1;
+      min-width: 160px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .demo-input:focus { border-color: var(--accent); }
+
+    .demo-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .demo-btn:hover { opacity: 0.85; }
+
+    .demo-output {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent3);
+      min-height: 44px;
+      word-break: break-all;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .demo-steps {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .step-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .step-chip span { color: var(--accent); }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    td:first-child { font-weight: 700; }
+
+    .tick { color: var(--accent3); }
+    .cross { color: var(--accent2); }
+    .dash  { color: var(--muted); }
+
+    /* ── SECTION HEADING ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 40px 0;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <p class="header-tag">Cryptography · Block Ciphers</p>
+    <h1>Modes of <span>Cipher</span> Block Operation</h1>
+    <p class="subtitle">// ECB · CBC · CFB · OFB · CTR · GCM — interactive visualisations & demos</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" onclick="switchTab('ecb',this)">ECB</button>
+    <button class="tab" onclick="switchTab('cbc',this)">CBC</button>
+    <button class="tab" onclick="switchTab('cfb',this)">CFB</button>
+    <button class="tab" onclick="switchTab('ofb',this)">OFB</button>
+    <button class="tab" onclick="switchTab('ctr',this)">CTR</button>
+    <button class="tab" onclick="switchTab('gcm',this)">GCM</button>
+    <button class="tab" onclick="switchTab('compare',this)">Compare</button>
+  </nav>
+
+  <!-- ══ ECB ══ -->
+  <div id="tab-ecb" class="panel active">
+    <div class="mode-card" data-accent="orange">
+      <div class="mode-header">
+        <div>
+          <div class="mode-title">Electronic Codebook — ECB</div>
+        </div>
+        <span class="mode-badge badge-deterministic">Deterministic</span>
+      </div>
+      <p class="mode-desc">
+        Each plaintext block is encrypted <em>independently</em> using the same key. No chaining, no IV.
+        The simplest block cipher mode — and the most dangerous for structured data, because identical
+        plaintext blocks always produce identical ciphertext blocks, leaking patterns.
+      </p>
+
+      <div class="diagram-wrap">
+        <svg class="cipher-diagram" viewBox="0 0 640 160" xmlns="http://www.w3.org/2000/svg" aria-label="ECB diagram">
+          <defs>
+            <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0 0, 7 3.5, 0 7" fill="#7d8590"/>
+            </marker>
+          </defs>
+          <!-- Key -->
+          <g transform="translate(0,0)">
+            <!-- Block 1 -->
+            <rect x="20" y="60" width="80" height="40" rx="5" fill="#1c2028" stroke="#21262d"/>
+            <text x="60" y="85" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₁</text>
+            <line x1="60" y1="100" x2="60" y2="120" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr)"/>
+            <rect x="20" y="120" width="80" height="32" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+            <text x="60" y="141" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+            <line x1="60" y1="152" x2="60" y2="165" stroke="#7d8590" stroke-width="1.5"/>
+
+            <!-- Block 2 -->
+            <rect x="160" y="60" width="80" height="40" rx="5" fill="#1c2028" stroke="#21262d"/>
+            <text x="200" y="85" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₂</text>
+            <line x1="200" y1="100" x2="200" y2="120" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr)"/>
+            <rect x="160" y="120" width="80" height="32" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+            <text x="200" y="141" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+            <line x1="200" y1="152" x2="200" y2="165" stroke="#7d8590" stroke-width="1.5"/>
+
+            <!-- Block 3 -->
+            <rect x="300" y="60" width="80" height="40" rx="5" fill="#1c2028" stroke="#21262d"/>
+            <text x="340" y="85" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₃</text>
+            <line x1="340" y1="100" x2="340" y2="120" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr)"/>
+            <rect x="300" y="120" width="80" height="32" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+            <text x="340" y="141" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+            <line x1="340" y1="152" x2="340" y2="165" stroke="#7d8590" stroke-width="1.5"/>
+
+            <!-- C labels -->
+            <text x="60" y="158" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle" transform="translate(0,12)">C₁</text>
+            <text x="200" y="158" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle" transform="translate(0,12)">C₂</text>
+            <text x="340" y="158" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle" transform="translate(0,12)">C₃</text>
+
+            <!-- Independent arrows label -->
+            <text x="440" y="100" fill="#7d8590" font-size="11" font-family="Share Tech Mono">← Each block</text>
+            <text x="440" y="115" fill="#7d8590" font-size="11" font-family="Share Tech Mono">   independent</text>
+            <text x="440" y="140" fill="#ff6b35" font-size="10" font-family="Share Tech Mono">⚠ Same P → Same C</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="props">
+        <div class="prop-item"><div class="prop-label">IV Required</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Encrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Decrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Error Propagation</div><div class="prop-value prop-yes">None</div></div>
+        <div class="prop-item"><div class="prop-label">Stream Capable</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Authentication</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Security</div><div class="prop-value prop-no">Weak ⚠</div></div>
+      </div>
+
+      <div class="demo-section">
+        <div class="demo-title">// Live Demo — XOR-based ECB simulation</div>
+        <div class="demo-row">
+          <input class="demo-input" id="ecb-text" placeholder="Plaintext (e.g. ATTACKATDAWN)" value="ATTACKATDAWN">
+          <input class="demo-input" id="ecb-key" placeholder="Key (e.g. KEY)" value="KEY" style="max-width:120px">
+          <button class="demo-btn" onclick="runECB()">Encrypt</button>
+        </div>
+        <div class="demo-output" id="ecb-out">— output appears here —</div>
+        <div class="demo-steps" id="ecb-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CBC ══ -->
+  <div id="tab-cbc" class="panel">
+    <div class="mode-card" data-accent="cyan">
+      <div class="mode-header">
+        <div><div class="mode-title">Cipher Block Chaining — CBC</div></div>
+        <span class="mode-badge badge-probabilistic">Probabilistic</span>
+      </div>
+      <p class="mode-desc">
+        Each plaintext block is XORed with the <em>previous ciphertext block</em> before encryption.
+        An Initialisation Vector (IV) starts the chain for the first block. Identical plaintexts
+        produce different ciphertexts as long as the IV changes — fixing ECB's biggest flaw.
+      </p>
+
+      <div class="diagram-wrap">
+        <svg class="cipher-diagram" viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0 0, 7 3.5, 0 7" fill="#7d8590"/>
+            </marker>
+          </defs>
+          <!-- IV -->
+          <rect x="20" y="20" width="60" height="30" rx="5" fill="#0d1a24" stroke="#00e5ff" stroke-dasharray="4,2"/>
+          <text x="50" y="40" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">IV</text>
+
+          <!-- Chain: IV → XOR1 → E → C1 → XOR2 → E → C2 -->
+          <!-- XOR 1 -->
+          <line x1="50" y1="50" x2="50" y2="75" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <circle cx="50" cy="85" r="12" fill="#1c2028" stroke="#a8ff3e" stroke-width="1.5"/>
+          <text x="50" y="90" fill="#a8ff3e" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <!-- P1 -->
+          <line x1="50" y1="55" x2="110" y2="55" stroke="#21262d" stroke-width="1"/>
+          <rect x="110" y="40" width="60" height="30" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="140" y="60" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₁</text>
+          <line x1="140" y1="70" x2="140" y2="85" stroke="#7d8590" stroke-width="1.5"/>
+          <line x1="50" y1="85" x2="140" y2="85" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+          <!-- E1 -->
+          <line x1="50" y1="97" x2="50" y2="115" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <rect x="20" y="115" width="60" height="30" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="50" y="135" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <!-- C1 -->
+          <line x1="50" y1="145" x2="50" y2="165" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="50" y="178" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₁</text>
+
+          <!-- Feedback line C1 → XOR2 -->
+          <line x1="50" y1="155" x2="200" y2="155" stroke="#a8ff3e" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <line x1="200" y1="155" x2="200" y2="97" stroke="#a8ff3e" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+          <!-- XOR 2 -->
+          <circle cx="200" cy="85" r="12" fill="#1c2028" stroke="#a8ff3e" stroke-width="1.5"/>
+          <text x="200" y="90" fill="#a8ff3e" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <!-- P2 -->
+          <rect x="250" y="40" width="60" height="30" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="280" y="60" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₂</text>
+          <line x1="280" y1="70" x2="280" y2="85" stroke="#7d8590" stroke-width="1.5"/>
+          <line x1="200" y1="85" x2="280" y2="85" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+          <!-- E2 -->
+          <line x1="200" y1="97" x2="200" y2="115" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <rect x="170" y="115" width="60" height="30" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="200" y="135" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <!-- C2 -->
+          <line x1="200" y1="145" x2="200" y2="165" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="200" y="178" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₂</text>
+
+          <!-- legend -->
+          <line x1="380" y1="85" x2="400" y2="85" stroke="#a8ff3e" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="408" y="90" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Chaining (C → next XOR)</text>
+          <text x="380" y="115" fill="#7d8590" font-size="10" font-family="Share Tech Mono">Sequential encrypt</text>
+          <text x="380" y="130" fill="#7d8590" font-size="10" font-family="Share Tech Mono">Parallel decrypt ✓</text>
+        </svg>
+      </div>
+
+      <div class="props">
+        <div class="prop-item"><div class="prop-label">IV Required</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Encrypt</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Decrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Error Propagation</div><div class="prop-value" style="color:var(--accent5)">2 blocks</div></div>
+        <div class="prop-item"><div class="prop-label">Stream Capable</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Authentication</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Security</div><div class="prop-value prop-yes">Good</div></div>
+      </div>
+
+      <div class="demo-section">
+        <div class="demo-title">// Live Demo — CBC XOR simulation</div>
+        <div class="demo-row">
+          <input class="demo-input" id="cbc-text" placeholder="Plaintext" value="HELLOWORLD">
+          <input class="demo-input" id="cbc-key" placeholder="Key" value="KEY" style="max-width:100px">
+          <input class="demo-input" id="cbc-iv"  placeholder="IV"  value="IV0" style="max-width:80px">
+          <button class="demo-btn" onclick="runCBC()">Encrypt</button>
+        </div>
+        <div class="demo-output" id="cbc-out">— output appears here —</div>
+        <div class="demo-steps" id="cbc-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CFB ══ -->
+  <div id="tab-cfb" class="panel">
+    <div class="mode-card" data-accent="green">
+      <div class="mode-header">
+        <div><div class="mode-title">Cipher Feedback — CFB</div></div>
+        <span class="mode-badge badge-stream">Stream-like</span>
+      </div>
+      <p class="mode-desc">
+        CFB turns a block cipher into a self-synchronising stream cipher. The previous ciphertext block
+        is <em>encrypted</em>, and the result is XORed with the current plaintext. Encryption is sequential;
+        decryption can be parallelised. Any single-bit error in a ciphertext block affects only that block
+        and part of the next.
+      </p>
+
+      <div class="diagram-wrap">
+        <svg class="cipher-diagram" viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr3" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0 0, 7 3.5, 0 7" fill="#7d8590"/>
+            </marker>
+          </defs>
+
+          <!-- IV register -->
+          <rect x="20" y="10" width="80" height="28" rx="5" fill="#0d1a24" stroke="#a8ff3e" stroke-dasharray="4,2"/>
+          <text x="60" y="29" fill="#a8ff3e" font-size="11" font-family="Share Tech Mono" text-anchor="middle">IV / Shift Reg</text>
+
+          <!-- E block 1 -->
+          <line x1="60" y1="38" x2="60" y2="58" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <rect x="20" y="58" width="80" height="28" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="60" y="77" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+
+          <!-- XOR 1 -->
+          <line x1="60" y1="86" x2="60" y2="105" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <circle cx="60" cy="115" r="12" fill="#1c2028" stroke="#a8ff3e" stroke-width="1.5"/>
+          <text x="60" y="120" fill="#a8ff3e" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+
+          <!-- P1 into XOR -->
+          <rect x="130" y="100" width="60" height="28" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="160" y="119" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₁</text>
+          <line x1="130" y1="115" x2="72" y2="115" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+          <!-- C1 output -->
+          <line x1="60" y1="127" x2="60" y2="150" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <text x="60" y="163" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₁</text>
+
+          <!-- Feedback: C1 back to next register -->
+          <line x1="60" y1="145" x2="240" y2="145" stroke="#a8ff3e" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <line x1="240" y1="145" x2="240" y2="24" stroke="#a8ff3e" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <line x1="240" y1="24" x2="222" y2="24" stroke="#a8ff3e" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+          <!-- E block 2 -->
+          <rect x="170" y="10" width="80" height="28" rx="5" fill="#0d1a24" stroke="#a8ff3e" stroke-dasharray="4,2"/>
+          <text x="210" y="29" fill="#a8ff3e" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₁ / Reg</text>
+          <line x1="210" y1="38" x2="210" y2="58" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <rect x="170" y="58" width="80" height="28" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="210" y="77" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <line x1="210" y1="86" x2="210" y2="105" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <circle cx="210" cy="115" r="12" fill="#1c2028" stroke="#a8ff3e" stroke-width="1.5"/>
+          <text x="210" y="120" fill="#a8ff3e" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <rect x="280" y="100" width="60" height="28" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="310" y="119" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₂</text>
+          <line x1="280" y1="115" x2="222" y2="115" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <line x1="210" y1="127" x2="210" y2="150" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <text x="210" y="163" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₂</text>
+
+          <text x="400" y="70" fill="#7d8590" font-size="10" font-family="Share Tech Mono">Key never directly XORs</text>
+          <text x="400" y="85" fill="#7d8590" font-size="10" font-family="Share Tech Mono">plaintext — E(prev C) does.</text>
+          <text x="400" y="110" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Self-synchronising stream</text>
+        </svg>
+      </div>
+
+      <div class="props">
+        <div class="prop-item"><div class="prop-label">IV Required</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Encrypt</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Decrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Error Propagation</div><div class="prop-value" style="color:var(--accent5)">Partial</div></div>
+        <div class="prop-item"><div class="prop-label">Stream Capable</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Authentication</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Security</div><div class="prop-value prop-yes">Good</div></div>
+      </div>
+
+      <div class="demo-section">
+        <div class="demo-title">// Live Demo — CFB simulation</div>
+        <div class="demo-row">
+          <input class="demo-input" id="cfb-text" placeholder="Plaintext" value="CRYPTOGRAPHY">
+          <input class="demo-input" id="cfb-key" placeholder="Key" value="MYKEY" style="max-width:100px">
+          <input class="demo-input" id="cfb-iv"  placeholder="IV"  value="ABCD" style="max-width:80px">
+          <button class="demo-btn" onclick="runCFB()">Encrypt</button>
+        </div>
+        <div class="demo-output" id="cfb-out">— output appears here —</div>
+        <div class="demo-steps" id="cfb-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ OFB ══ -->
+  <div id="tab-ofb" class="panel">
+    <div class="mode-card" data-accent="purple">
+      <div class="mode-header">
+        <div><div class="mode-title">Output Feedback — OFB</div></div>
+        <span class="mode-badge badge-stream">Stream-like</span>
+      </div>
+      <p class="mode-desc">
+        OFB generates a <em>keystream</em> independent of plaintext or ciphertext — the encryption
+        function is applied repeatedly to the IV to produce keystream blocks, which are then XORed
+        with plaintext. Errors don't propagate. The keystream can be pre-computed. Re-using an IV
+        is catastrophic.
+      </p>
+
+      <div class="diagram-wrap">
+        <svg class="cipher-diagram" viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0 0, 7 3.5, 0 7" fill="#7d8590"/>
+            </marker>
+          </defs>
+          <!-- Keystream chain -->
+          <rect x="20" y="10" width="80" height="28" rx="5" fill="#0d1a24" stroke="#bf5af2" stroke-dasharray="4,2"/>
+          <text x="60" y="29" fill="#bf5af2" font-size="11" font-family="Share Tech Mono" text-anchor="middle">IV</text>
+          <line x1="60" y1="38" x2="60" y2="58" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <rect x="20" y="58" width="80" height="28" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="60" y="77" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <line x1="60" y1="86" x2="60" y2="105" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+          <!-- O1 box -->
+          <rect x="20" y="105" width="80" height="28" rx="5" fill="#1c1428" stroke="#bf5af2" stroke-width="1.5"/>
+          <text x="60" y="124" fill="#bf5af2" font-size="11" font-family="Share Tech Mono" text-anchor="middle">O₁ (keystr)</text>
+
+          <!-- XOR with P1 -->
+          <line x1="100" y1="119" x2="140" y2="119" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <circle cx="152" cy="119" r="12" fill="#1c2028" stroke="#bf5af2" stroke-width="1.5"/>
+          <text x="152" y="124" fill="#bf5af2" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <rect x="170" y="105" width="60" height="28" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="200" y="124" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₁</text>
+          <line x1="170" y1="119" x2="164" y2="119" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <line x1="152" y1="131" x2="152" y2="150" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <text x="152" y="163" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₁</text>
+
+          <!-- OFB feedback (O1 → E to get O2) -->
+          <line x1="60" y1="105" x2="60" y2="95" stroke="#bf5af2" stroke-width="1"/>
+          <line x1="60" y1="95" x2="250" y2="95" stroke="#bf5af2" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <line x1="250" y1="95" x2="250" y2="38" stroke="#bf5af2" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arr4)"/>
+
+          <!-- E2 chain -->
+          <rect x="210" y="10" width="80" height="28" rx="5" fill="#0d1a24" stroke="#bf5af2" stroke-dasharray="4,2"/>
+          <text x="250" y="29" fill="#bf5af2" font-size="11" font-family="Share Tech Mono" text-anchor="middle">O₁ (fed back)</text>
+          <line x1="250" y1="38" x2="250" y2="58" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <rect x="210" y="58" width="80" height="28" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="250" y="77" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <line x1="250" y1="86" x2="250" y2="105" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <rect x="210" y="105" width="80" height="28" rx="5" fill="#1c1428" stroke="#bf5af2" stroke-width="1.5"/>
+          <text x="250" y="124" fill="#bf5af2" font-size="11" font-family="Share Tech Mono" text-anchor="middle">O₂ (keystr)</text>
+          <line x1="290" y1="119" x2="330" y2="119" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <circle cx="342" cy="119" r="12" fill="#1c2028" stroke="#bf5af2" stroke-width="1.5"/>
+          <text x="342" y="124" fill="#bf5af2" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <rect x="360" y="105" width="60" height="28" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="390" y="124" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₂</text>
+          <line x1="360" y1="119" x2="354" y2="119" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <line x1="342" y1="131" x2="342" y2="150" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr4)"/>
+          <text x="342" y="163" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₂</text>
+
+          <text x="470" y="80" fill="#7d8590" font-size="10" font-family="Share Tech Mono">Keystream independent</text>
+          <text x="470" y="95" fill="#7d8590" font-size="10" font-family="Share Tech Mono">of plaintext.</text>
+          <text x="470" y="118" fill="#bf5af2" font-size="10" font-family="Share Tech Mono">No error propagation ✓</text>
+          <text x="470" y="133" fill="#ff6b35" font-size="10" font-family="Share Tech Mono">⚠ Never reuse IV!</text>
+        </svg>
+      </div>
+
+      <div class="props">
+        <div class="prop-item"><div class="prop-label">IV Required</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Encrypt</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Decrypt</div><div class="prop-value prop-no">No</div></div>
+        <div class="prop-item"><div class="prop-label">Error Propagation</div><div class="prop-value prop-yes">None</div></div>
+        <div class="prop-item"><div class="prop-label">Stream Capable</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Pre-computable KS</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Authentication</div><div class="prop-value prop-no">No</div></div>
+      </div>
+
+      <div class="demo-section">
+        <div class="demo-title">// Live Demo — OFB keystream simulation</div>
+        <div class="demo-row">
+          <input class="demo-input" id="ofb-text" placeholder="Plaintext" value="SECRETMSG">
+          <input class="demo-input" id="ofb-key" placeholder="Key" value="KEYSTREAM" style="max-width:120px">
+          <input class="demo-input" id="ofb-iv"  placeholder="IV"  value="INIT" style="max-width:80px">
+          <button class="demo-btn" onclick="runOFB()">Encrypt</button>
+        </div>
+        <div class="demo-output" id="ofb-out">— output appears here —</div>
+        <div class="demo-steps" id="ofb-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CTR ══ -->
+  <div id="tab-ctr" class="panel">
+    <div class="mode-card" data-accent="yellow">
+      <div class="mode-header">
+        <div><div class="mode-title">Counter Mode — CTR</div></div>
+        <span class="mode-badge badge-probabilistic">Parallelisable</span>
+      </div>
+      <p class="mode-desc">
+        CTR combines a nonce with an incrementing counter to produce unique inputs for each block.
+        Each block is encrypted independently — making CTR fully parallelisable in both directions.
+        It turns the block cipher into a synchronous stream cipher. Random access decryption is possible.
+      </p>
+
+      <div class="diagram-wrap">
+        <svg class="cipher-diagram" viewBox="0 0 640 160" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr5" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0 0, 7 3.5, 0 7" fill="#7d8590"/>
+            </marker>
+          </defs>
+
+          <!-- CTR blocks: nonce|counter 1 -->
+          <rect x="20" y="10" width="90" height="28" rx="5" fill="#0d1a24" stroke="#ffd60a" stroke-width="1.5"/>
+          <text x="65" y="29" fill="#ffd60a" font-size="11" font-family="Share Tech Mono" text-anchor="middle">Nonce | 1</text>
+          <line x1="65" y1="38" x2="65" y2="58" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <rect x="20" y="58" width="90" height="28" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="65" y="77" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <line x1="65" y1="86" x2="65" y2="100" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <circle cx="65" cy="112" r="12" fill="#1c2028" stroke="#ffd60a" stroke-width="1.5"/>
+          <text x="65" y="117" fill="#ffd60a" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <rect x="120" y="98" width="60" height="28" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="150" y="117" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₁</text>
+          <line x1="120" y1="112" x2="77" y2="112" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <line x1="65" y1="124" x2="65" y2="145" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <text x="65" y="158" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₁</text>
+
+          <!-- CTR block 2 -->
+          <rect x="220" y="10" width="90" height="28" rx="5" fill="#0d1a24" stroke="#ffd60a" stroke-width="1.5"/>
+          <text x="265" y="29" fill="#ffd60a" font-size="11" font-family="Share Tech Mono" text-anchor="middle">Nonce | 2</text>
+          <line x1="265" y1="38" x2="265" y2="58" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <rect x="220" y="58" width="90" height="28" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="265" y="77" fill="#00e5ff" font-size="11" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <line x1="265" y1="86" x2="265" y2="100" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <circle cx="265" cy="112" r="12" fill="#1c2028" stroke="#ffd60a" stroke-width="1.5"/>
+          <text x="265" y="117" fill="#ffd60a" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <rect x="320" y="98" width="60" height="28" rx="5" fill="#1c2028" stroke="#21262d"/>
+          <text x="350" y="117" fill="#e6edf3" font-size="11" font-family="Share Tech Mono" text-anchor="middle">P₂</text>
+          <line x1="320" y1="112" x2="277" y2="112" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <line x1="265" y1="124" x2="265" y2="145" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr5)"/>
+          <text x="265" y="158" fill="#ff6b35" font-size="11" font-family="Share Tech Mono" text-anchor="middle">C₂</text>
+
+          <!-- No chain arrow — that's the point -->
+          <text x="430" y="70" fill="#ffd60a" font-size="11" font-family="Share Tech Mono">↑ No chaining</text>
+          <text x="430" y="85" fill="#7d8590" font-size="10" font-family="Share Tech Mono">Blocks fully independent</text>
+          <text x="430" y="100" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Parallel encrypt ✓</text>
+          <text x="430" y="115" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Parallel decrypt ✓</text>
+          <text x="430" y="130" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Random access ✓</text>
+        </svg>
+      </div>
+
+      <div class="props">
+        <div class="prop-item"><div class="prop-label">IV / Nonce</div><div class="prop-value prop-yes">Nonce</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Encrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Decrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Error Propagation</div><div class="prop-value prop-yes">None</div></div>
+        <div class="prop-item"><div class="prop-label">Stream Capable</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Random Access</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Authentication</div><div class="prop-value prop-no">No</div></div>
+      </div>
+
+      <div class="demo-section">
+        <div class="demo-title">// Live Demo — CTR mode simulation</div>
+        <div class="demo-row">
+          <input class="demo-input" id="ctr-text" placeholder="Plaintext" value="PARALLELCRYPTO">
+          <input class="demo-input" id="ctr-key" placeholder="Key" value="CTRKEY" style="max-width:110px">
+          <input class="demo-input" id="ctr-nonce" placeholder="Nonce" value="NONCE1" style="max-width:90px">
+          <button class="demo-btn" onclick="runCTR()">Encrypt</button>
+        </div>
+        <div class="demo-output" id="ctr-out">— output appears here —</div>
+        <div class="demo-steps" id="ctr-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ GCM ══ -->
+  <div id="tab-gcm" class="panel">
+    <div class="mode-card" data-accent="pink">
+      <div class="mode-header">
+        <div><div class="mode-title">Galois/Counter Mode — GCM</div></div>
+        <span class="mode-badge badge-probabilistic">AEAD</span>
+      </div>
+      <p class="mode-desc">
+        GCM = CTR mode encryption + GHASH authentication. It produces an <em>authentication tag</em>
+        alongside ciphertext, guaranteeing both <strong>confidentiality</strong> and
+        <strong>integrity</strong>. Additional Authenticated Data (AAD) can be authenticated without
+        being encrypted. The industry standard for TLS 1.3, SSH, and modern protocols.
+      </p>
+
+      <div class="diagram-wrap">
+        <svg class="cipher-diagram" viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr6" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0 0, 7 3.5, 0 7" fill="#7d8590"/>
+            </marker>
+          </defs>
+          <!-- CTR part -->
+          <text x="20" y="18" fill="#7d8590" font-size="10" font-family="Share Tech Mono">── CTR ENCRYPTION ──────────────</text>
+          <rect x="20" y="24" width="80" height="24" rx="5" fill="#0d1a24" stroke="#ffd60a" stroke-width="1.2"/>
+          <text x="60" y="41" fill="#ffd60a" font-size="10" font-family="Share Tech Mono" text-anchor="middle">Nonce|Ctr</text>
+          <line x1="60" y1="48" x2="60" y2="62" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <rect x="20" y="62" width="80" height="24" rx="5" fill="#162032" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="60" y="79" fill="#00e5ff" font-size="10" font-family="Share Tech Mono" text-anchor="middle">E(key)</text>
+          <line x1="60" y1="86" x2="60" y2="100" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <circle cx="60" cy="110" r="10" fill="#1c2028" stroke="#ff2d78" stroke-width="1.5"/>
+          <text x="60" y="115" fill="#ff2d78" font-size="13" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <rect x="110" y="100" width="50" height="20" rx="4" fill="#1c2028" stroke="#21262d"/>
+          <text x="135" y="114" fill="#e6edf3" font-size="10" font-family="Share Tech Mono" text-anchor="middle">P₁</text>
+          <line x1="110" y1="110" x2="70" y2="110" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <line x1="60" y1="120" x2="60" y2="140" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <text x="60" y="153" fill="#ff6b35" font-size="10" font-family="Share Tech Mono" text-anchor="middle">C₁</text>
+
+          <!-- GHASH part -->
+          <text x="220" y="18" fill="#7d8590" font-size="10" font-family="Share Tech Mono">── GHASH AUTHENTICATION ────────</text>
+          <rect x="220" y="24" width="80" height="24" rx="5" fill="#1c0a28" stroke="#ff2d78" stroke-dasharray="3,2"/>
+          <text x="260" y="41" fill="#ff2d78" font-size="10" font-family="Share Tech Mono" text-anchor="middle">AAD (optional)</text>
+
+          <line x1="260" y1="48" x2="260" y2="62" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <rect x="220" y="62" width="80" height="24" rx="5" fill="#1c0a28" stroke="#ff2d78" stroke-width="1.5"/>
+          <text x="260" y="79" fill="#ff2d78" font-size="10" font-family="Share Tech Mono" text-anchor="middle">GHASH block</text>
+
+          <line x1="60" y1="143" x2="260" y2="143" stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <line x1="260" y1="143" x2="260" y2="110" stroke="#ff2d78" stroke-width="1.5" marker-end="url(#arr6)"/>
+          <circle cx="260" cy="98" r="10" fill="#1c0a28" stroke="#ff2d78" stroke-width="1.5"/>
+          <text x="260" y="103" fill="#ff2d78" font-size="11" font-family="Share Tech Mono" text-anchor="middle">⊕</text>
+          <line x1="260" y1="86" x2="260" y2="88" stroke="#7d8590" stroke-width="1.5"/>
+
+          <line x1="260" y1="86" x2="260" y2="110" stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <line x1="260" y1="86" x2="350" y2="86" stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <rect x="350" y="72" width="80" height="24" rx="5" fill="#1c0a28" stroke="#ff2d78" stroke-width="1.5"/>
+          <text x="390" y="89" fill="#ff2d78" font-size="10" font-family="Share Tech Mono" text-anchor="middle">Auth Tag</text>
+
+          <text x="460" y="80" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Confidentiality ✓</text>
+          <text x="460" y="95" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Integrity ✓</text>
+          <text x="460" y="110" fill="#a8ff3e" font-size="10" font-family="Share Tech Mono">Parallel ✓</text>
+          <text x="460" y="130" fill="#7d8590" font-size="10" font-family="Share Tech Mono">TLS 1.3 standard</text>
+        </svg>
+      </div>
+
+      <div class="props">
+        <div class="prop-item"><div class="prop-label">IV / Nonce</div><div class="prop-value prop-yes">Nonce</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Encrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Parallel Decrypt</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Error Propagation</div><div class="prop-value prop-yes">None</div></div>
+        <div class="prop-item"><div class="prop-label">Authentication</div><div class="prop-value prop-yes">Yes (AEAD)</div></div>
+        <div class="prop-item"><div class="prop-label">AAD Support</div><div class="prop-value prop-yes">Yes</div></div>
+        <div class="prop-item"><div class="prop-label">Security</div><div class="prop-value prop-yes">Excellent</div></div>
+      </div>
+
+      <div class="demo-section">
+        <div class="demo-title">// GCM — conceptual note</div>
+        <div class="demo-output" style="color:var(--muted)">
+GCM uses Galois field (GF 2¹²⁸) multiplication for GHASH — not simulatable with simple ASCII
+operations. In real use: AES-256-GCM with a random 96-bit nonce is the recommended choice.
+
+Key properties to remember:
+  • Nonce must NEVER be reused with the same key — catastrophic if so.
+  • Auth tag (128-bit) detects any tampering with ciphertext or AAD.
+  • Both encrypt and decrypt can run fully in parallel.
+  • Used in: TLS 1.3, SSH, IPSec, WireGuard, Google QUIC.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ COMPARE ══ -->
+  <div id="tab-compare" class="panel">
+    <div class="section-label">// Comparison Matrix</div>
+    <div class="compare-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>IV/Nonce</th>
+            <th>‖ Encrypt</th>
+            <th>‖ Decrypt</th>
+            <th>Error Prop.</th>
+            <th>Auth Tag</th>
+            <th>Stream?</th>
+            <th>Best Use Case</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--accent2)">ECB</td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">None</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td>Avoid — insecure for most data</td>
+          </tr>
+          <tr>
+            <td style="color:var(--accent)">CBC</td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">✓</span></td>
+            <td style="color:var(--accent5)">2 blocks</td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td>File encryption, disk</td>
+          </tr>
+          <tr>
+            <td style="color:var(--accent3)">CFB</td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">✓</span></td>
+            <td style="color:var(--accent5)">Partial</td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">✓</span></td>
+            <td>Stream data, self-syncing</td>
+          </tr>
+          <tr>
+            <td style="color:var(--accent4)">OFB</td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">None</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">✓</span></td>
+            <td>Noisy channels (satellite)</td>
+          </tr>
+          <tr>
+            <td style="color:var(--accent5)">CTR</td>
+            <td>Nonce</td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">None</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="tick">✓</span></td>
+            <td>High-speed parallel encryption</td>
+          </tr>
+          <tr>
+            <td style="color:#ff2d78">GCM</td>
+            <td>Nonce</td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">✓</span></td>
+            <td><span class="tick">None</span></td>
+            <td><span class="tick">✓ AEAD</span></td>
+            <td><span class="tick">✓</span></td>
+            <td>TLS 1.3, modern protocols</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:32px">
+      <div class="section-label">// Security Ranking (general guidance)</div>
+      <div class="mode-card" data-accent="pink" style="padding:20px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--mono);font-size:11px;color:#ff2d78;width:40px">GCM</div>
+            <div style="flex:1;background:var(--surface);border-radius:4px;height:12px;overflow:hidden">
+              <div style="width:100%;height:100%;background:linear-gradient(90deg,#ff2d78,#bf5af2);border-radius:4px"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">Best — AEAD</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--accent5);width:40px">CTR</div>
+            <div style="flex:1;background:var(--surface);border-radius:4px;height:12px;overflow:hidden">
+              <div style="width:90%;height:100%;background:linear-gradient(90deg,var(--accent5),#ff9500);border-radius:4px"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">Excellent (no auth)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--accent4);width:40px">OFB</div>
+            <div style="flex:1;background:var(--surface);border-radius:4px;height:12px;overflow:hidden">
+              <div style="width:72%;height:100%;background:linear-gradient(90deg,var(--accent4),#7b61ff);border-radius:4px"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">Good — niche use</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--accent3);width:40px">CFB</div>
+            <div style="flex:1;background:var(--surface);border-radius:4px;height:12px;overflow:hidden">
+              <div style="width:68%;height:100%;background:linear-gradient(90deg,var(--accent3),#7ef542);border-radius:4px"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">Good — self-sync</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--accent);width:40px">CBC</div>
+            <div style="flex:1;background:var(--surface);border-radius:4px;height:12px;overflow:hidden">
+              <div style="width:58%;height:100%;background:linear-gradient(90deg,var(--accent),#0096aa);border-radius:4px"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">Good — legacy</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--accent2);width:40px">ECB</div>
+            <div style="flex:1;background:var(--surface);border-radius:4px;height:12px;overflow:hidden">
+              <div style="width:15%;height:100%;background:var(--accent2);border-radius:4px"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--accent2)">Avoid ⚠</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="container">
+    modes_of_cipher_blocks · educational simulation
+  </div>
+</footer>
+
+<script>
+// ─── Utility ───────────────────────────────────────────
+function strToNums(s) {
+  return Array.from(s).map(c => c.charCodeAt(0));
+}
+function xorChar(charCode, keyCode) {
+  return String.fromCharCode(charCode ^ keyCode);
+}
+function toHex(s) {
+  return Array.from(s).map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join(' ');
+}
+function showSteps(containerId, steps) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = steps.map(s =>
+    `<div class="step-chip">${s.orig} → <span>${s.enc}</span></div>`
+  ).join('');
+}
+
+// ─── Tab switch ────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── ECB ──────────────────────────────────────────────
+function runECB() {
+  const text = document.getElementById('ecb-text').value;
+  const key  = document.getElementById('ecb-key').value || 'KEY';
+  // Each char independently XORed with cycling key (simulating independent block encryption)
+  let result = '', steps = [];
+  for (let i = 0; i < text.length; i++) {
+    const k = key.charCodeAt(i % key.length);
+    const enc = xorChar(text.charCodeAt(i), k);
+    steps.push({ orig: text[i], enc: '0x' + text.charCodeAt(i).toString(16) + '⊕0x' + k.toString(16) });
+    result += enc;
+  }
+  document.getElementById('ecb-out').textContent =
+    `Hex: ${toHex(result)}\n` +
+    `Note: identical plaintext blocks → identical ciphertext blocks\n` +
+    `(each block encrypted with same key, independently)`;
+  showSteps('ecb-steps', steps);
+}
+
+// ─── CBC ──────────────────────────────────────────────
+function runCBC() {
+  const text = document.getElementById('cbc-text').value;
+  const key  = document.getElementById('cbc-key').value || 'KEY';
+  const ivStr = document.getElementById('cbc-iv').value || 'IV0';
+  let prevBlock = Array.from(ivStr).map(c => c.charCodeAt(0));
+  let result = '', steps = [];
+
+  for (let i = 0; i < text.length; i++) {
+    const pCode  = text.charCodeAt(i);
+    const prevC  = prevBlock[i % prevBlock.length];
+    const kCode  = key.charCodeAt(i % key.length);
+    // XOR with prev ciphertext, then "encrypt" (XOR with key)
+    const xored  = pCode ^ prevC;
+    const enc    = xored ^ kCode;
+    prevBlock[i % prevBlock.length] = enc;
+    steps.push({ orig: text[i], enc: '0x' + enc.toString(16) });
+    result += String.fromCharCode(enc);
+  }
+  document.getElementById('cbc-out').textContent =
+    `Hex: ${toHex(result)}\n` +
+    `IV used: "${ivStr}" — chain: each byte XORed with previous ciphertext byte before encryption`;
+  showSteps('cbc-steps', steps);
+}
+
+// ─── CFB ──────────────────────────────────────────────
+function runCFB() {
+  const text = document.getElementById('cfb-text').value;
+  const key  = document.getElementById('cfb-key').value || 'MYKEY';
+  const ivStr = document.getElementById('cfb-iv').value || 'ABCD';
+  // CFB: Ci = Pi ⊕ E(Ci-1), seed with IV
+  let shift = Array.from(ivStr).map(c => c.charCodeAt(0));
+  let result = '', steps = [];
+
+  for (let i = 0; i < text.length; i++) {
+    const s = shift[i % shift.length];
+    const k = key.charCodeAt(i % key.length);
+    const encrypted_prev = s ^ k;          // simulate E(prev ciphertext)
+    const ci = text.charCodeAt(i) ^ encrypted_prev;
+    shift[i % shift.length] = ci;          // feedback: use ciphertext
+    steps.push({ orig: text[i], enc: '0x' + ci.toString(16) });
+    result += String.fromCharCode(ci);
+  }
+  document.getElementById('cfb-out').textContent =
+    `Hex: ${toHex(result)}\n` +
+    `CFB: E(prev_ciphertext) ⊕ plaintext — self-synchronising stream`;
+  showSteps('cfb-steps', steps);
+}
+
+// ─── OFB ──────────────────────────────────────────────
+function runOFB() {
+  const text = document.getElementById('ofb-text').value;
+  const key  = document.getElementById('ofb-key').value || 'KEYSTREAM';
+  const ivStr = document.getElementById('ofb-iv').value || 'INIT';
+  // OFB: keystream generated by E(E(E(...IV))), independent of plaintext
+  let ks = Array.from(ivStr).map(c => c.charCodeAt(0));
+  let result = '', steps = [], keystreamChars = [];
+
+  for (let i = 0; i < text.length; i++) {
+    // Evolve keystream: ks[i] = prev ks[i] ^ key[i]
+    const ki = ks[i % ks.length] ^ key.charCodeAt(i % key.length);
+    ks[i % ks.length] = ki;
+    const ci = text.charCodeAt(i) ^ ki;
+    keystreamChars.push('0x' + ki.toString(16));
+    steps.push({ orig: text[i], enc: '0x' + ci.toString(16) });
+    result += String.fromCharCode(ci);
+  }
+  document.getElementById('ofb-out').textContent =
+    `Hex: ${toHex(result)}\n` +
+    `Keystream (independent of plaintext): ${keystreamChars.join(' ')}\n` +
+    `OFB keystream can be pre-computed before plaintext is known`;
+  showSteps('ofb-steps', steps);
+}
+
+// ─── CTR ──────────────────────────────────────────────
+function runCTR() {
+  const text  = document.getElementById('ctr-text').value;
+  const key   = document.getElementById('ctr-key').value || 'CTRKEY';
+  const nonce = document.getElementById('ctr-nonce').value || 'NONCE1';
+  let result = '', steps = [];
+
+  for (let i = 0; i < text.length; i++) {
+    // CTR block = E(nonce || counter_i)
+    const counterInput = nonce.charCodeAt(i % nonce.length) ^ i;
+    const keystream    = counterInput ^ key.charCodeAt(i % key.length);
+    const ci           = text.charCodeAt(i) ^ keystream;
+    steps.push({ orig: text[i], enc: '0x' + ci.toString(16) });
+    result += String.fromCharCode(ci);
+  }
+  document.getElementById('ctr-out').textContent =
+    `Hex: ${toHex(result)}\n` +
+    `Each block uses: E(Nonce ‖ counter_${0}…${text.length-1})\n` +
+    `Fully parallelisable — any block can be decrypted independently`;
+  showSteps('ctr-steps', steps);
+}
+
+// Auto-run all demos on load for a richer first impression
+window.addEventListener('DOMContentLoaded', () => {
+  runECB(); runCBC(); runCFB(); runOFB(); runCTR();
+});
+</script>
+</body>
+</html>
