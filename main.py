@@ -770,3 +770,255 @@ def load_MOCB_html():
 def load_des_html():
     with open("des.html") as f:
         return f.read()
+
+# ──────────────────────────────────────────
+# 2DES / 3DES IMPLEMENTATION (EDUCATIONAL)
+# ──────────────────────────────────────────
+
+class MultiDESRequest(BaseModel):
+    text: str
+    key1: str
+    key2: str
+    key3: str = ""        # only for 3DES
+    mode: str = "encrypt" # encrypt | decrypt
+    variant: str = "2des" # 2des | 3des
+
+
+def des_encrypt_bits(bits: list[int], key: str) -> list[int]:
+    """Single DES encrypt on raw bits — returns 64 output bits."""
+    key_bits = string_to_bits(key.ljust(8)[:8])
+    key_permuted = permute(key_bits, PC1)
+    left_k, right_k = key_permuted[:28], key_permuted[28:]
+    round_keys = []
+    for shift in SHIFT_TABLE:
+        left_k = left_shift(left_k, shift)
+        right_k = left_shift(right_k, shift)
+        round_keys.append(permute(left_k + right_k, PC2))
+
+    bits_p = permute(bits, IP)
+    left, right = bits_p[:32], bits_p[32:]
+    for k in round_keys:
+        new_right = xor(left, feistel(right, k))
+        left, right = right, new_right
+    return permute(right + left, IP_INV)
+
+
+def des_decrypt_bits(bits: list[int], key: str) -> list[int]:
+    """Single DES decrypt on raw bits."""
+    key_bits = string_to_bits(key.ljust(8)[:8])
+    key_permuted = permute(key_bits, PC1)
+    left_k, right_k = key_permuted[:28], key_permuted[28:]
+    round_keys = []
+    for shift in SHIFT_TABLE:
+        left_k = left_shift(left_k, shift)
+        right_k = left_shift(right_k, shift)
+        round_keys.append(permute(left_k + right_k, PC2))
+    round_keys = round_keys[::-1]  # reverse for decryption
+
+    bits_p = permute(bits, IP)
+    left, right = bits_p[:32], bits_p[32:]
+    for k in round_keys:
+        new_right = xor(left, feistel(right, k))
+        left, right = right, new_right
+    return permute(right + left, IP_INV)
+
+
+def bits_to_hex(bits: list[int]) -> str:
+    """Convert bit array to hex string."""
+    result = ""
+    for i in range(0, len(bits), 4):
+        nibble = bits[i:i+4]
+        val = sum(b << (3 - j) for j, b in enumerate(nibble))
+        result += format(val, 'X')
+    return result
+
+
+def two_des_encrypt(text: str, key1: str, key2: str):
+    """
+    2DES Encrypt: C = E(K2, E(K1, P))
+    Note: Vulnerable to meet-in-the-middle attack (~57-bit effective security).
+    """
+    input_bits = string_to_bits(text.ljust(8)[:8])
+
+    # Phase 1: Encrypt with K1
+    c1_bits = des_encrypt_bits(input_bits, key1)
+    # Phase 2: Encrypt with K2
+    c2_bits = des_encrypt_bits(c1_bits, key2)
+
+    steps = [
+        {
+            "phase": 1,
+            "operation": f"E(K1='{key1.strip()}', P)",
+            "input_hex": bits_to_hex(input_bits),
+            "output_hex": bits_to_hex(c1_bits),
+            "note": "DES Encrypt with Key 1"
+        },
+        {
+            "phase": 2,
+            "operation": f"E(K2='{key2.strip()}', C1)",
+            "input_hex": bits_to_hex(c1_bits),
+            "output_hex": bits_to_hex(c2_bits),
+            "note": "DES Encrypt with Key 2 — produces final ciphertext"
+        }
+    ]
+    return steps, bits_to_hex(c2_bits), bits_to_string(c2_bits)
+
+
+def two_des_decrypt(text: str, key1: str, key2: str):
+    """
+    2DES Decrypt: P = D(K1, D(K2, C))
+    """
+    input_bits = string_to_bits(text.ljust(8)[:8])
+
+    c1_bits = des_decrypt_bits(input_bits, key2)
+    p_bits  = des_decrypt_bits(c1_bits, key1)
+
+    steps = [
+        {
+            "phase": 1,
+            "operation": f"D(K2='{key2.strip()}', C)",
+            "input_hex": bits_to_hex(input_bits),
+            "output_hex": bits_to_hex(c1_bits),
+            "note": "DES Decrypt with Key 2"
+        },
+        {
+            "phase": 2,
+            "operation": f"D(K1='{key1.strip()}', C1)",
+            "input_hex": bits_to_hex(c1_bits),
+            "output_hex": bits_to_hex(p_bits),
+            "note": "DES Decrypt with Key 1 — recovers plaintext"
+        }
+    ]
+    return steps, bits_to_hex(p_bits), bits_to_string(p_bits)
+
+
+def three_des_encrypt(text: str, key1: str, key2: str, key3: str):
+    """
+    3DES-EDE Encrypt: C = E(K3, D(K2, E(K1, P)))
+    When K1=K3, compatible with single DES using K1.
+    Effective key strength: ~112 bits.
+    """
+    input_bits = string_to_bits(text.ljust(8)[:8])
+
+    c1_bits = des_encrypt_bits(input_bits, key1)   # E(K1)
+    c2_bits = des_decrypt_bits(c1_bits, key2)       # D(K2)
+    c3_bits = des_encrypt_bits(c2_bits, key3)       # E(K3)
+
+    steps = [
+        {
+            "phase": 1,
+            "operation": f"E(K1='{key1.strip()}', P)",
+            "input_hex": bits_to_hex(input_bits),
+            "output_hex": bits_to_hex(c1_bits),
+            "note": "Encrypt with Key 1"
+        },
+        {
+            "phase": 2,
+            "operation": f"D(K2='{key2.strip()}', C1)",
+            "input_hex": bits_to_hex(c1_bits),
+            "output_hex": bits_to_hex(c2_bits),
+            "note": "Decrypt with Key 2 (the D in EDE)"
+        },
+        {
+            "phase": 3,
+            "operation": f"E(K3='{key3.strip()}', C2)",
+            "input_hex": bits_to_hex(c2_bits),
+            "output_hex": bits_to_hex(c3_bits),
+            "note": "Encrypt with Key 3 — produces final ciphertext"
+        }
+    ]
+    return steps, bits_to_hex(c3_bits), bits_to_string(c3_bits)
+
+
+def three_des_decrypt(text: str, key1: str, key2: str, key3: str):
+    """
+    3DES-EDE Decrypt: P = D(K1, E(K2, D(K3, C)))
+    """
+    input_bits = string_to_bits(text.ljust(8)[:8])
+
+    c1_bits = des_decrypt_bits(input_bits, key3)    # D(K3)
+    c2_bits = des_encrypt_bits(c1_bits, key2)        # E(K2)
+    p_bits  = des_decrypt_bits(c2_bits, key1)        # D(K1)
+
+    steps = [
+        {
+            "phase": 1,
+            "operation": f"D(K3='{key3.strip()}', C)",
+            "input_hex": bits_to_hex(input_bits),
+            "output_hex": bits_to_hex(c1_bits),
+            "note": "Decrypt with Key 3"
+        },
+        {
+            "phase": 2,
+            "operation": f"E(K2='{key2.strip()}', C1)",
+            "input_hex": bits_to_hex(c1_bits),
+            "output_hex": bits_to_hex(c2_bits),
+            "note": "Encrypt with Key 2 (reverse of EDE middle step)"
+        },
+        {
+            "phase": 3,
+            "operation": f"D(K1='{key1.strip()}', C2)",
+            "input_hex": bits_to_hex(c2_bits),
+            "output_hex": bits_to_hex(p_bits),
+            "note": "Decrypt with Key 1 — recovers plaintext"
+        }
+    ]
+    return steps, bits_to_hex(p_bits), bits_to_string(p_bits)
+
+
+# ──────────────────────────────────────────
+# 2DES / 3DES ENDPOINT
+# ──────────────────────────────────────────
+
+@app.post("/multides")
+def multides_api(req: MultiDESRequest):
+    """
+    Unified endpoint for 2DES and 3DES.
+    variant: '2des' or '3des'
+    mode:    'encrypt' or 'decrypt'
+    """
+    variant = req.variant.lower()
+    mode    = req.mode.lower()
+
+    if variant == "2des":
+        if mode == "encrypt":
+            steps, hex_out, text_out = two_des_encrypt(req.text, req.key1, req.key2)
+        else:
+            steps, hex_out, text_out = two_des_decrypt(req.text, req.key1, req.key2)
+        key_info = {"key1": req.key1, "key2": req.key2}
+        security_note = "Effective security ~57 bits (meet-in-the-middle attack)"
+
+    elif variant == "3des":
+        k3 = req.key3 or req.key1  # default K3=K1 for backward compatibility
+        if mode == "encrypt":
+            steps, hex_out, text_out = three_des_encrypt(req.text, req.key1, req.key2, k3)
+        else:
+            steps, hex_out, text_out = three_des_decrypt(req.text, req.key1, req.key2, k3)
+        key_info = {"key1": req.key1, "key2": req.key2, "key3": k3}
+        security_note = "Effective security ~112 bits (EDE mode, NIST deprecated 2023)"
+
+    else:
+        return {"error": f"Unknown variant '{variant}'. Use '2des' or '3des'."}
+
+    return {
+        "input":         req.text,
+        "variant":       variant.upper(),
+        "mode":          mode,
+        "keys":          key_info,
+        "steps":         steps,
+        "output_hex":    hex_out,
+        "output_text":   text_out,
+        "security_note": security_note
+    }
+
+
+# Convenience aliases
+@app.post("/2des")
+def two_des_api(req: MultiDESRequest):
+    req.variant = "2des"
+    return multides_api(req)
+
+@app.post("/3des")
+def three_des_api(req: MultiDESRequest):
+    req.variant = "3des"
+    return multides_api(req)
