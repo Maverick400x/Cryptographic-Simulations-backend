@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DES Simulator</title>
+<title>DES / 2DES / 3DES Simulator</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,6 +25,12 @@
     --amber: #d29922;
     --amber-bg: #3a2a12;
     --amber-text: #e3b341;
+    --purple: #bc8cff;
+    --purple-bg: #2d1f5e;
+    --purple-text: #d2a8ff;
+    --coral: #ff7b72;
+    --coral-bg: #3d1a18;
+    --coral-text: #ffa198;
     --info-bg: #1f3461;
     --info-text: #79c0ff;
     --success-bg: #1a3a29;
@@ -45,34 +51,31 @@
     overflow: hidden;
   }
 
-  /* LAYOUT */
   .root { display: flex; height: 100vh; }
   .sidebar {
-    width: 260px; min-width: 260px;
+    width: 270px; min-width: 270px;
     background: var(--bg2);
     border-right: 1px solid var(--border);
     padding: 16px;
-    display: flex; flex-direction: column; gap: 12px;
+    display: flex; flex-direction: column; gap: 10px;
     overflow-y: auto;
   }
   .main { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
-  /* TYPOGRAPHY */
   .panel-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
   label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 4px; }
   .section-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
   .mono-val { font-family: var(--mono); font-size: 11px; color: var(--text2); word-break: break-all; }
 
-  /* INPUTS */
   input[type=text], textarea {
     width: 100%; font-family: var(--mono); font-size: 12px;
-    padding: 8px 10px; background: var(--bg);
+    padding: 7px 10px; background: var(--bg);
     border: 1px solid var(--border); border-radius: var(--radius);
     color: var(--text); resize: none; outline: none;
     transition: border-color .15s;
   }
   input[type=text]:focus, textarea:focus { border-color: var(--blue); }
-  textarea { height: 54px; }
+  textarea { height: 48px; }
 
   input[type=range] {
     -webkit-appearance: none; appearance: none;
@@ -86,10 +89,9 @@
     border: 2px solid var(--bg2);
   }
 
-  /* BUTTONS */
-  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn-row { display: flex; gap: 5px; flex-wrap: wrap; }
   .btn {
-    flex: 1; min-width: 44px; padding: 7px 4px;
+    flex: 1; min-width: 36px; padding: 6px 4px;
     border: 1px solid var(--border2); border-radius: var(--radius);
     background: transparent; color: var(--text);
     font-size: 12px; cursor: pointer; transition: background .12s, opacity .12s;
@@ -98,54 +100,64 @@
   .btn:hover { background: var(--bg3); }
   .btn:active { opacity: .75; }
   .btn.primary { background: var(--blue-bg); border-color: var(--blue); color: var(--blue-text); font-weight: 600; }
-  .btn.primary:hover { opacity: .85; }
+  .btn.primary:hover, .btn.active-purple:hover, .btn.active-coral:hover { opacity: .85; }
   .btn:disabled { opacity: .3; cursor: default; pointer-events: none; }
 
-  /* DIVIDER */
   .divider { height: 1px; background: var(--border); margin: 2px 0; }
 
-  /* CARD */
   .card {
     background: var(--bg2); border: 1px solid var(--border);
     border-radius: var(--radius-lg); padding: 12px 14px;
   }
+  .card.phase-2 { border-left: 3px solid var(--purple); }
+  .card.phase-3 { border-left: 3px solid var(--coral); }
   .card-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
 
-  /* TAGS */
   .tag {
     display: inline-block; font-size: 10px; padding: 2px 8px;
     border-radius: 999px; background: var(--bg3);
     color: var(--text2); border: 1px solid var(--border);
     font-family: var(--mono);
   }
-  .tag.info { background: var(--info-bg); color: var(--info-text); border-color: var(--blue); }
+  .tag.info    { background: var(--info-bg);    color: var(--info-text);    border-color: var(--blue); }
   .tag.success { background: var(--success-bg); color: var(--success-text); border-color: var(--green); }
-  .tag.warn { background: var(--warn-bg); color: var(--warn-text); border-color: var(--amber); }
+  .tag.warn    { background: var(--warn-bg);    color: var(--warn-text);    border-color: var(--amber); }
+  .tag.purple  { background: var(--purple-bg);  color: var(--purple-text);  border-color: var(--purple); }
+  .tag.coral   { background: var(--coral-bg);   color: var(--coral-text);   border-color: var(--coral); }
 
-  /* STATUS */
   .status-line { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
-  .dot.run { background: var(--green); animation: pulse 1s infinite; }
+  .dot.run  { background: var(--green); animation: pulse 1s infinite; }
   .dot.done { background: var(--green); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  /* FLOW BAR */
+  .algo-tabs { display: flex; gap: 4px; }
+  .algo-tab {
+    flex: 1; padding: 7px 4px; text-align: center; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    cursor: pointer; transition: all .15s; color: var(--text2); background: transparent;
+    font-family: inherit;
+  }
+  .algo-tab:hover { background: var(--bg3); }
+  .algo-tab.sel-des  { background: var(--blue-bg);   border-color: var(--blue);   color: var(--blue-text); }
+  .algo-tab.sel-2des { background: var(--purple-bg); border-color: var(--purple); color: var(--purple-text); }
+  .algo-tab.sel-3des { background: var(--coral-bg);  border-color: var(--coral);  color: var(--coral-text); }
+
   .flow-bar { display: flex; align-items: center; gap: 0; overflow-x: auto; }
   .flow-node {
-    padding: 5px 10px; font-size: 11px; white-space: nowrap;
+    padding: 5px 9px; font-size: 10px; white-space: nowrap;
     border: 1px solid var(--border); border-radius: var(--radius);
-    background: var(--bg3); color: var(--text2);
-    transition: all .2s;
+    background: var(--bg3); color: var(--text2); transition: all .2s;
   }
-  .flow-node.active { border-color: var(--blue); background: var(--info-bg); color: var(--blue-text); }
-  .flow-node.done { border-color: var(--green); background: var(--success-bg); color: var(--success-text); }
-  .flow-arrow { flex: 1; min-width: 8px; height: 1px; background: var(--border); }
+  .flow-node.active   { border-color: var(--blue);   background: var(--info-bg);    color: var(--blue-text); }
+  .flow-node.active-p { border-color: var(--purple);  background: var(--purple-bg);  color: var(--purple-text); }
+  .flow-node.active-c { border-color: var(--coral);   background: var(--coral-bg);   color: var(--coral-text); }
+  .flow-node.done     { border-color: var(--green);   background: var(--success-bg); color: var(--success-text); }
+  .flow-arrow { flex: 1; min-width: 6px; height: 1px; background: var(--border); }
 
-  /* PROGRESS BAR */
   .prog-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 10px; }
   .prog-fill { height: 100%; background: var(--blue); border-radius: 2px; width: 0; transition: width .3s; }
 
-  /* BIT GRID */
   .bits-wrap { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
   .bit {
     aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
@@ -154,42 +166,69 @@
     color: var(--text3); transition: background .15s, color .15s;
   }
   .bit.one { background: var(--info-bg); color: var(--blue-text); border-color: var(--blue); }
-  .bit.hi { background: var(--warn-bg); color: var(--warn-text); border-color: var(--amber); }
+  .bit.hi  { background: var(--warn-bg); color: var(--warn-text); border-color: var(--amber); }
 
-  /* ROUNDS */
-  .rounds-grid { display: flex; flex-direction: column; gap: 4px; }
+  .rounds-grid { display: flex; flex-direction: column; gap: 3px; }
   .round-row {
     display: flex; align-items: center; gap: 8px;
-    padding: 7px 10px; border-left: 2px solid var(--border);
+    padding: 6px 10px; border-left: 2px solid var(--border);
     border-radius: 0 var(--radius) var(--radius) 0;
     background: var(--bg); transition: border-color .15s, background .15s;
   }
-  .round-row.active { border-color: var(--blue); background: var(--info-bg); }
-  .round-row.done { border-color: var(--green); background: #111; }
+  .round-row.active { border-color: var(--blue);  background: var(--info-bg); }
+  .round-row.done   { border-color: var(--green); background: #111; }
   .round-num { font-size: 10px; color: var(--text3); min-width: 20px; font-family: var(--mono); }
   .lr-display { font-size: 10px; color: var(--text2); word-break: break-all; flex: 1; font-family: var(--mono); }
   .lr-display span { color: var(--text); }
 
-  /* S-BOX */
   .sbox-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; }
   .sc {
     font-size: 8px; text-align: center; padding: 3px 1px;
     border-radius: 2px; color: var(--text3);
     border: 1px solid transparent; font-family: var(--mono);
   }
-  .sc.hl { background: var(--info-bg); color: var(--blue-text); border-color: var(--blue); font-weight: 700; }
-  .sc.row-hi { background: var(--bg3); color: var(--text2); }
+  .sc.hl     { background: var(--info-bg); color: var(--blue-text); border-color: var(--blue); font-weight: 700; }
+  .sc.row-hi { background: var(--bg3);     color: var(--text2); }
   .sc.col-hi { background: var(--warn-bg); color: var(--warn-text); }
 
-  /* HEX OUTPUT */
+  .phase-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 600; padding: 3px 10px;
+    border-radius: 999px; margin-bottom: 10px;
+  }
+  .phase-badge.p1 { background: var(--info-bg);   color: var(--info-text);   border: 1px solid var(--blue); }
+  .phase-badge.p2 { background: var(--purple-bg); color: var(--purple-text); border: 1px solid var(--purple); }
+  .phase-badge.p3 { background: var(--coral-bg);  color: var(--coral-text);  border: 1px solid var(--coral); }
+
+  .inter-hex {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: .1em; word-break: break-all;
+    padding: 8px 10px; background: var(--bg); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .inter-hex.blue   { color: var(--blue-text);   border-color: var(--blue); }
+  .inter-hex.purple { color: var(--purple-text); border-color: var(--purple); }
+  .inter-hex.coral  { color: var(--coral-text);  border-color: var(--coral); }
+
   .hex-out {
     font-family: var(--mono); font-size: 18px; font-weight: 600;
-    letter-spacing: .12em; color: var(--blue-text); word-break: break-all;
+    letter-spacing: .12em; color: var(--success-text); word-break: break-all;
   }
 
-  /* SPEED ROW */
   .speed-row { display: flex; align-items: center; gap: 8px; }
   .speed-row input { flex: 1; }
+
+  .info-box {
+    font-size: 11px; color: var(--text2); line-height: 1.6;
+    padding: 8px 10px; background: var(--bg3);
+    border-radius: var(--radius); border-left: 2px solid var(--border2);
+  }
+  .info-box b { color: var(--text); }
+
+  .key-compare { display: grid; gap: 6px; margin-top: 8px; }
+  .key-box { padding: 6px 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); }
+  .key-box .key-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+  .key-box .key-val { font-family: var(--mono); font-size: 11px; color: var(--text); margin-top: 2px; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -199,7 +238,7 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div>
-      <div class="panel-title">DES Simulator</div>
+      <div class="panel-title">DES Suite</div>
       <div class="status-line">
         <div class="dot" id="dot"></div>
         <span id="status-txt">Ready</span>
@@ -209,18 +248,47 @@
     <div class="divider"></div>
 
     <div>
+      <label>Algorithm</label>
+      <div class="algo-tabs">
+        <button class="algo-tab sel-des"  id="tab-des"  onclick="setAlgo('des')">DES</button>
+        <button class="algo-tab"          id="tab-2des" onclick="setAlgo('2des')">2DES</button>
+        <button class="algo-tab"          id="tab-3des" onclick="setAlgo('3des')">3DES</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
       <label>Plaintext (8 chars)</label>
       <textarea id="pt">HELLO123</textarea>
     </div>
-    <div>
+
+    <div id="keys-des">
       <label>Key (8 chars)</label>
-      <input type="text" id="key" value="ABCDEFGH">
+      <input type="text" id="key1" value="ABCDEFGH">
     </div>
+
+    <div id="keys-2des" style="display:none">
+      <label>Key 1 (8 chars)</label>
+      <input type="text" id="key1-2" value="ABCDEFGH">
+      <label style="margin-top:6px">Key 2 (8 chars)</label>
+      <input type="text" id="key2-2" value="HGFEDCBA">
+    </div>
+
+    <div id="keys-3des" style="display:none">
+      <label>Key 1 (8 chars)</label>
+      <input type="text" id="key1-3" value="ABCDEFGH">
+      <label style="margin-top:6px">Key 2 (8 chars)</label>
+      <input type="text" id="key2-3" value="HGFEDCBA">
+      <label style="margin-top:6px">Key 3 (8 chars)</label>
+      <input type="text" id="key3-3" value="ABCDABCD">
+    </div>
+
     <div>
       <label>Mode</label>
       <div class="btn-row">
         <button class="btn primary" id="enc-btn" onclick="setMode('encrypt')">Encrypt</button>
-        <button class="btn" id="dec-btn" onclick="setMode('decrypt')">Decrypt</button>
+        <button class="btn"         id="dec-btn" onclick="setMode('decrypt')">Decrypt</button>
       </div>
     </div>
 
@@ -229,8 +297,8 @@
     <div>
       <label>Playback speed</label>
       <div class="speed-row">
-        <input type="range" id="speed" min="100" max="1500" value="700" step="100">
-        <span id="speed-lbl" style="font-size:11px;color:var(--text2);min-width:40px;text-align:right">700ms</span>
+        <input type="range" id="speed" min="100" max="1500" value="500" step="100">
+        <span id="speed-lbl" style="font-size:11px;color:var(--text2);min-width:40px;text-align:right">500ms</span>
       </div>
     </div>
 
@@ -239,16 +307,16 @@
       <button class="btn" id="play-btn" onclick="togglePlay()" disabled>Play</button>
     </div>
     <div class="btn-row">
-      <button class="btn" id="prev-btn" onclick="prevStep()" disabled>&#9664; Prev</button>
-      <button class="btn" id="next-btn" onclick="nextStep()" disabled>Next &#9654;</button>
-      <button class="btn" id="reset-btn" onclick="resetSim()" disabled>&#9646;&#9646; Reset</button>
+      <button class="btn" id="prev-btn"  onclick="prevStep()" disabled>&#9664; Prev</button>
+      <button class="btn" id="next-btn"  onclick="nextStep()" disabled>Next &#9654;</button>
+      <button class="btn" id="reset-btn" onclick="resetSim(false)" disabled>Reset</button>
     </div>
 
     <div class="divider"></div>
 
     <div>
-      <div class="section-label" style="margin-bottom:6px">Current round</div>
-      <div id="cur-round-info" style="color:var(--text2);font-size:12px;font-family:var(--mono);line-height:1.6">—</div>
+      <div class="section-label" style="margin-bottom:5px">Current step</div>
+      <div id="cur-round-info" style="color:var(--text2);font-size:11px;font-family:var(--mono);line-height:1.7">—</div>
     </div>
   </div>
 
@@ -257,19 +325,29 @@
 
     <!-- PIPELINE -->
     <div class="card">
-      <div class="card-title">Pipeline</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="card-title" style="margin:0">Pipeline</div>
+        <span class="tag info" id="algo-tag">DES</span>
+      </div>
       <div class="flow-bar" id="flow-bar">
-        <div class="flow-node" id="fn-input">Input</div>
+        <div class="flow-node" id="fn-0">Input</div>
         <div class="flow-arrow"></div>
-        <div class="flow-node" id="fn-ip">Initial permutation</div>
+        <div class="flow-node" id="fn-1">IP</div>
         <div class="flow-arrow"></div>
-        <div class="flow-node" id="fn-rounds">16 rounds</div>
+        <div class="flow-node" id="fn-2">16 rounds</div>
         <div class="flow-arrow"></div>
-        <div class="flow-node" id="fn-fp">Final permutation</div>
+        <div class="flow-node" id="fn-3">FP</div>
         <div class="flow-arrow"></div>
-        <div class="flow-node" id="fn-out">Ciphertext</div>
+        <div class="flow-node" id="fn-4">Output</div>
       </div>
       <div class="prog-bar"><div class="prog-fill" id="prog"></div></div>
+    </div>
+
+    <!-- INFO -->
+    <div class="card" id="info-card">
+      <div class="card-title">Algorithm info</div>
+      <div class="info-box" id="info-txt">Select an algorithm and press Run.</div>
+      <div class="key-compare" id="key-compare" style="display:none"></div>
     </div>
 
     <!-- INPUT BITS -->
@@ -281,32 +359,27 @@
       <div class="bits-wrap" id="input-bits"></div>
     </div>
 
-    <!-- POST-IP -->
-    <div class="card" id="ip-card" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="card-title" style="margin:0">After initial permutation</div>
-        <span class="tag">64 bits</span>
-      </div>
-      <div class="bits-wrap" id="ip-bits"></div>
-      <div style="display:flex;gap:20px;margin-top:10px">
-        <div>
-          <div class="section-label" style="margin-bottom:3px">L0</div>
-          <div class="mono-val" id="ip-l">—</div>
+    <!-- PHASE 1 -->
+    <div id="phase1-section" style="display:none">
+      <div class="card">
+        <div class="phase-badge p1" id="phase1-badge">Phase 1 — DES Encrypt (K1)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="card-title" style="margin:0">After initial permutation</div>
+          <span class="tag">64 bits</span>
         </div>
-        <div>
-          <div class="section-label" style="margin-bottom:3px">R0</div>
-          <div class="mono-val" id="ip-r">—</div>
+        <div class="bits-wrap" id="ip-bits"></div>
+        <div style="display:flex;gap:20px;margin-top:10px">
+          <div><div class="section-label" style="margin-bottom:3px">L0</div><div class="mono-val" id="ip-l">—</div></div>
+          <div><div class="section-label" style="margin-bottom:3px">R0</div><div class="mono-val" id="ip-r">—</div></div>
         </div>
       </div>
-    </div>
-
-    <!-- ROUNDS LIST -->
-    <div class="card" id="rounds-card" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0">Feistel rounds</div>
-        <span class="tag" id="rounds-tag">0 / 16</span>
+      <div class="card" style="margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="card-title" style="margin:0">Feistel rounds — Phase 1</div>
+          <span class="tag" id="rounds-tag">0 / 16</span>
+        </div>
+        <div class="rounds-grid" id="rounds-list"></div>
       </div>
-      <div class="rounds-grid" id="rounds-list"></div>
     </div>
 
     <!-- S-BOX -->
@@ -322,16 +395,64 @@
       </div>
       <div class="sbox-grid" id="sbox-grid"></div>
       <div style="display:flex;gap:10px;margin-top:8px">
-        <span class="tag info">Selected</span>
-        <span class="tag">Row match</span>
-        <span class="tag warn">Col match</span>
+        <span class="tag info">Selected</span><span class="tag">Row match</span><span class="tag warn">Col match</span>
+      </div>
+    </div>
+
+    <!-- INTERMEDIATE 1 -->
+    <div class="card" id="inter1-card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="card-title" style="margin:0">After Phase 1 — C1 (input to Phase 2)</div>
+        <span class="tag purple">intermediate</span>
+      </div>
+      <div class="inter-hex blue" id="inter1-hex">—</div>
+      <div style="margin-top:10px">
+        <div class="section-label" style="margin-bottom:5px">64-bit C1</div>
+        <div class="bits-wrap" id="inter1-bits"></div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div id="phase2-section" style="display:none">
+      <div class="card phase-2">
+        <div class="phase-badge p2" id="phase2-badge">Phase 2 — DES Decrypt (K2)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="card-title" style="margin:0">Feistel rounds — Phase 2</div>
+          <span class="tag purple" id="rounds2-tag">0 / 16</span>
+        </div>
+        <div class="rounds-grid" id="rounds2-list"></div>
+      </div>
+    </div>
+
+    <!-- INTERMEDIATE 2 -->
+    <div class="card" id="inter2-card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="card-title" style="margin:0">After Phase 2 — C2 (input to Phase 3)</div>
+        <span class="tag coral">intermediate</span>
+      </div>
+      <div class="inter-hex purple" id="inter2-hex">—</div>
+      <div style="margin-top:10px">
+        <div class="section-label" style="margin-bottom:5px">64-bit C2</div>
+        <div class="bits-wrap" id="inter2-bits"></div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div id="phase3-section" style="display:none">
+      <div class="card phase-3">
+        <div class="phase-badge p3" id="phase3-badge">Phase 3 — DES Encrypt (K3)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="card-title" style="margin:0">Feistel rounds — Phase 3</div>
+          <span class="tag coral" id="rounds3-tag">0 / 16</span>
+        </div>
+        <div class="rounds-grid" id="rounds3-list"></div>
       </div>
     </div>
 
     <!-- FINAL OUTPUT -->
     <div class="card" id="out-card" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0">Ciphertext output</div>
+        <div class="card-title" style="margin:0">Final ciphertext</div>
         <span class="tag success">&#10003; Complete</span>
       </div>
       <div class="hex-out" id="final-hex">—</div>
@@ -339,10 +460,11 @@
         <div class="section-label" style="margin-bottom:6px">64-bit output</div>
         <div class="bits-wrap" id="out-bits"></div>
       </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text2)" id="key-strength-note"></div>
     </div>
 
-  </div><!-- /main -->
-</div><!-- /root -->
+  </div>
+</div>
 
 <script>
 // ── DES TABLES ────────────────────────────────────────────────────────────
@@ -364,80 +486,124 @@ const SBOX=[
   [[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],[1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],[7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],[2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]
 ];
 
-// ── DES ENGINE ────────────────────────────────────────────────────────────
+// ── ENGINE ────────────────────────────────────────────────────────────────
 function strToBits(s){
   let b=[];
-  for(let i=0;i<s.length;i++){
-    let c=s.charCodeAt(i).toString(2).padStart(8,'0');
-    for(let ch of c) b.push(+ch);
-  }
+  for(let i=0;i<s.length;i++){let c=s.charCodeAt(i).toString(2).padStart(8,'0');for(let ch of c)b.push(+ch);}
   return b;
 }
 function bitsToHex(b){
   let h='';
-  for(let i=0;i<b.length;i+=4){
-    let n=b.slice(i,i+4).reduce((a,x,j)=>a+(x<<(3-j)),0);
-    h+=n.toString(16).toUpperCase();
-  }
+  for(let i=0;i<b.length;i+=4){let n=b.slice(i,i+4).reduce((a,x,j)=>a+(x<<(3-j)),0);h+=n.toString(16).toUpperCase();}
   return h;
 }
-function permute(b,tbl){return tbl.map(i=>b[i-1]);}
-function xor(a,b){return a.map((x,i)=>x^b[i]);}
+function permute(b,t){return t.map(i=>b[i-1]);}
+function xorB(a,b){return a.map((x,i)=>x^b[i]);}
 function rotL(a,n){return[...a.slice(n),...a.slice(0,n)];}
 
-function generateSubkeys(keyStr){
+function genSubkeys(keyStr){
   let kb=strToBits(keyStr.slice(0,8).padEnd(8,' '));
   let kp=permute(kb,PC1);
-  let C=kp.slice(0,28),D=kp.slice(28);
-  let keys=[];
-  for(let i=0;i<16;i++){
-    C=rotL(C,SHIFTS[i]); D=rotL(D,SHIFTS[i]);
-    keys.push(permute([...C,...D],PC2));
-  }
+  let C=kp.slice(0,28),D=kp.slice(28),keys=[];
+  for(let i=0;i<16;i++){C=rotL(C,SHIFTS[i]);D=rotL(D,SHIFTS[i]);keys.push(permute([...C,...D],PC2));}
   return keys;
 }
 
 function feistel(R,K){
-  let er=permute(R,E);
-  let x=xor(er,K);
-  let out=[];
+  let er=permute(R,E),x=xorB(er,K),out=[];
   for(let i=0;i<8;i++){
     let chunk=x.slice(i*6,(i+1)*6);
-    let row=(chunk[0]<<1)|chunk[5];
-    let col=(chunk[1]<<3)|(chunk[2]<<2)|(chunk[3]<<1)|chunk[4];
+    let row=(chunk[0]<<1)|chunk[5],col=(chunk[1]<<3)|(chunk[2]<<2)|(chunk[3]<<1)|chunk[4];
     let v=SBOX[i][row][col];
     out.push(...v.toString(2).padStart(4,'0').split('').map(Number));
   }
   return permute(out,P);
 }
 
-function runDES(ptStr,keyStr,decrypt){
-  let pb=strToBits(ptStr.slice(0,8).padEnd(8,' '));
-  let subkeys=generateSubkeys(keyStr);
+// Core single DES pass — returns phase object
+function desCore(inputBits,keyStr,decrypt){
+  let subkeys=genSubkeys(keyStr);
   if(decrypt) subkeys=subkeys.reverse();
-  let ip=permute(pb,IP);
-  let L=ip.slice(0,32),R=ip.slice(32);
-  let steps=[];
+  let ip=permute(inputBits,IP);
+  let L=ip.slice(0,32),R=ip.slice(32),steps=[];
   for(let i=0;i<16;i++){
     let f=feistel(R,subkeys[i]);
-    let newR=xor(L,f);
-    let newL=R;
-    let er=permute(R,E);
-    let chunk=xor(er,subkeys[i]).slice(0,6);
-    let sRow=(chunk[0]<<1)|chunk[5];
-    let sCol=(chunk[1]<<3)|(chunk[2]<<2)|(chunk[3]<<1)|chunk[4];
+    let newR=xorB(L,f),newL=R;
+    let er=permute(R,E),chunk=xorB(er,subkeys[i]).slice(0,6);
+    let sRow=(chunk[0]<<1)|chunk[5],sCol=(chunk[1]<<3)|(chunk[2]<<2)|(chunk[3]<<1)|chunk[4];
     steps.push({l:[...L],r:[...R],newL:[...newL],newR:[...newR],sRow,sCol,sBits:chunk});
-    L=newL; R=newR;
+    L=newL;R=newR;
   }
-  let preOut=[...R,...L];
-  let cipher=permute(preOut,IP_INV);
-  return{inputBits:pb,ipBits:ip,ipL:ip.slice(0,32),ipR:ip.slice(32),steps,outputBits:cipher};
+  let outputBits=permute([...R,...L],IP_INV);
+  return{ipBits:ip,ipL:ip.slice(0,32),ipR:ip.slice(32),steps,outputBits};
+}
+
+// ── MULTI-DES ─────────────────────────────────────────────────────────────
+function runDES(pt,k1,dec){
+  let inputBits=strToBits(pt);
+  let p1=desCore(inputBits,k1,dec);
+  return{inputBits,algo:'des',phases:[{label:'DES '+(dec?'Decrypt':'Encrypt')+' (K1)',...p1}],outputBits:p1.outputBits};
+}
+
+// 2DES: E(K1,P) then E(K2,C1) — or reverse for decrypt
+function run2DES(pt,k1,k2,dec){
+  let inputBits=strToBits(pt);
+  let p1,p2;
+  if(!dec){
+    p1=desCore(inputBits,k1,false);       // Encrypt with K1
+    p2=desCore(p1.outputBits,k2,false);   // Encrypt with K2
+  } else {
+    p1=desCore(inputBits,k2,true);        // Decrypt with K2
+    p2=desCore(p1.outputBits,k1,true);    // Decrypt with K1
+  }
+  return{inputBits,algo:'2des',
+    phases:[
+      {label:'Phase 1 — DES '+(dec?'Decrypt (K2)':'Encrypt (K1)'),...p1},
+      {label:'Phase 2 — DES '+(dec?'Decrypt (K1)':'Encrypt (K2)'),...p2}
+    ],
+    outputBits:p2.outputBits};
+}
+
+// 3DES-EDE: E(K1) → D(K2) → E(K3)
+function run3DES(pt,k1,k2,k3,dec){
+  let inputBits=strToBits(pt);
+  let p1,p2,p3;
+  if(!dec){
+    p1=desCore(inputBits,k1,false);       // E(K1)
+    p2=desCore(p1.outputBits,k2,true);    // D(K2)
+    p3=desCore(p2.outputBits,k3,false);   // E(K3)
+  } else {
+    p1=desCore(inputBits,k3,true);        // D(K3)
+    p2=desCore(p1.outputBits,k2,false);   // E(K2)
+    p3=desCore(p2.outputBits,k1,true);    // D(K1)
+  }
+  return{inputBits,algo:'3des',
+    phases:[
+      {label:'Phase 1 — '+(dec?'D(K3)':'E(K1)'),...p1},
+      {label:'Phase 2 — '+(dec?'E(K2)':'D(K2)'),...p2},
+      {label:'Phase 3 — '+(dec?'D(K1)':'E(K3)'),...p3}
+    ],
+    outputBits:p3.outputBits};
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────
-let sim=null, cur=-1, playing=false, ticker=null, mode='encrypt';
+let sim=null,algo='des',mode='encrypt';
+let allSteps=[],cur=-1,playing=false,ticker=null;
+const PREFIXES=['rr0-','rr1-','rr2-'];
+const TAG_IDS=['rounds-tag','rounds2-tag','rounds3-tag'];
 
 // ── UI ────────────────────────────────────────────────────────────────────
+function setAlgo(a){
+  algo=a;
+  document.getElementById('tab-des').className ='algo-tab'+(a==='des' ?' sel-des':'');
+  document.getElementById('tab-2des').className='algo-tab'+(a==='2des'?' sel-2des':'');
+  document.getElementById('tab-3des').className='algo-tab'+(a==='3des'?' sel-3des':'');
+  document.getElementById('keys-des').style.display =a==='des' ?'':'none';
+  document.getElementById('keys-2des').style.display=a==='2des'?'':'none';
+  document.getElementById('keys-3des').style.display=a==='3des'?'':'none';
+  updateInfoBox();
+}
+
 function setMode(m){
   mode=m;
   document.getElementById('enc-btn').className='btn'+(m==='encrypt'?' primary':'');
@@ -451,158 +617,268 @@ document.getElementById('speed').addEventListener('input',function(){
 
 function setStatus(txt,state){
   document.getElementById('status-txt').textContent=txt;
-  const d=document.getElementById('dot');
-  d.className='dot'+(state==='run'?' run':state==='done'?' done':'');
+  document.getElementById('dot').className='dot'+(state==='run'?' run':state==='done'?' done':'');
 }
 
-function setFlowStage(stage){
-  const ids=['fn-input','fn-ip','fn-rounds','fn-fp','fn-out'];
-  ids.forEach((id,i)=>{
-    const el=document.getElementById(id);
-    el.className='flow-node'+(i<stage?' done':i===stage?' active':'');
-  });
+function updateInfoBox(){
+  const msgs={
+    des:'<b>DES</b> — 56-bit key, 16 Feistel rounds. Fast but considered insecure for modern use due to short key length.',
+    '2des':'<b>2DES</b> — Two DES passes with independent 56-bit keys (K1, K2). Operation: <b>E(K2, E(K1, P))</b>. Vulnerable to <b>meet-in-the-middle attack</b> — effective security is only ~57 bits despite 112-bit key material.',
+    '3des':'<b>3DES-EDE</b> — Three DES passes using Encrypt-Decrypt-Encrypt pattern: <b>E(K1) → D(K2) → E(K3)</b>. 168-bit key, ~112-bit effective security. When K1=K3 degrades to 2DES. NIST-approved until 2023.'
+  };
+  document.getElementById('info-txt').innerHTML=msgs[algo];
 }
 
-function renderBits(bits,containerId,highlightFn){
-  const c=document.getElementById(containerId);
+function renderBits(bits,id){
+  const c=document.getElementById(id); if(!c)return;
   c.innerHTML='';
-  bits.forEach((b,i)=>{
-    const d=document.createElement('div');
-    let cls='bit'+(b?' one':'');
-    if(highlightFn&&highlightFn(i)) cls+=' hi';
-    d.className=cls;
-    d.textContent=b;
-    c.appendChild(d);
-  });
+  bits.forEach(b=>{const d=document.createElement('div');d.className='bit'+(b?' one':'');d.textContent=b;c.appendChild(d);});
 }
 
-function renderSBox(step,rndNum){
-  document.getElementById('sbox-card').style.display='';
-  document.getElementById('sbox-rnd').textContent=rndNum;
-  document.getElementById('sbox-bits').textContent=step.sBits.join('');
-  document.getElementById('sbox-row').textContent=step.sRow;
-  document.getElementById('sbox-col').textContent=step.sCol;
-  const val=SBOX[0][step.sRow][step.sCol];
-  document.getElementById('sbox-val-tag').textContent='S1 value: '+val;
-  const grid=document.getElementById('sbox-grid');
-  grid.innerHTML='';
-  for(let r=0;r<4;r++){
-    for(let c=0;c<16;c++){
-      const d=document.createElement('div');
-      let cls='sc';
-      if(r===step.sRow&&c===step.sCol) cls+=' hl';
-      else if(r===step.sRow) cls+=' row-hi';
-      else if(c===step.sCol) cls+=' col-hi';
-      d.className=cls;
-      d.textContent=SBOX[0][r][c];
-      grid.appendChild(d);
-    }
-  }
-}
-
-function buildRoundRows(){
-  const list=document.getElementById('rounds-list');
-  list.innerHTML='';
+function buildRoundRows(listId,prefix){
+  const list=document.getElementById(listId); list.innerHTML='';
   for(let i=0;i<16;i++){
     const d=document.createElement('div');
-    d.className='round-row'; d.id='rr-'+i;
-    d.innerHTML=`<span class="round-num">R${i+1}</span><div class="lr-display" id="rr-lr-${i}"><span style="color:var(--text3)">waiting…</span></div>`;
+    d.className='round-row';d.id=prefix+i;
+    d.innerHTML=`<span class="round-num">R${i+1}</span><div class="lr-display" id="${prefix}lr-${i}"><span style="color:var(--text3)">waiting…</span></div>`;
     list.appendChild(d);
   }
 }
 
-function updateRoundRow(i,step,state){
-  const row=document.getElementById('rr-'+i);
-  const lr=document.getElementById('rr-lr-'+i);
+function updRR(prefix,i,step,state){
+  const row=document.getElementById(prefix+i); if(!row)return;
+  const lr=document.getElementById(prefix+'lr-'+i);
   row.className='round-row '+state;
-  if(state!=='waiting'){
-    lr.innerHTML=`L=<span>${bitsToHex(step.l)}</span>&rarr;<span>${bitsToHex(step.newL)}</span> &nbsp; R=<span>${bitsToHex(step.r)}</span>&rarr;<span>${bitsToHex(step.newR)}</span>`;
+  if(state!=='waiting') lr.innerHTML=`L=<span>${bitsToHex(step.l)}</span>&rarr;<span>${bitsToHex(step.newL)}</span> &nbsp; R=<span>${bitsToHex(step.r)}</span>&rarr;<span>${bitsToHex(step.newR)}</span>`;
+}
+
+function clearRR(prefix,from){
+  for(let j=from;j<16;j++){
+    const rr=document.getElementById(prefix+j); if(!rr)continue;
+    rr.className='round-row';
+    document.getElementById(prefix+'lr-'+j).innerHTML='<span style="color:var(--text3)">waiting…</span>';
+  }
+}
+
+function renderSBox(step,rnd){
+  document.getElementById('sbox-card').style.display='';
+  document.getElementById('sbox-rnd').textContent=rnd;
+  document.getElementById('sbox-bits').textContent=step.sBits.join('');
+  document.getElementById('sbox-row').textContent=step.sRow;
+  document.getElementById('sbox-col').textContent=step.sCol;
+  document.getElementById('sbox-val-tag').textContent='S1: '+SBOX[0][step.sRow][step.sCol];
+  const grid=document.getElementById('sbox-grid'); grid.innerHTML='';
+  for(let r=0;r<4;r++) for(let c=0;c<16;c++){
+    const d=document.createElement('div');
+    let cls='sc';
+    if(r===step.sRow&&c===step.sCol) cls+=' hl';
+    else if(r===step.sRow) cls+=' row-hi';
+    else if(c===step.sCol) cls+=' col-hi';
+    d.className=cls; d.textContent=SBOX[0][r][c]; grid.appendChild(d);
   }
 }
 
 function updateProgress(){
-  const pct=cur<0?0:Math.round(((cur+1)/16)*100);
+  const pct=allSteps.length===0?0:Math.round(((cur+1)/allSteps.length)*100);
   document.getElementById('prog').style.width=pct+'%';
-  document.getElementById('rounds-tag').textContent=Math.max(0,cur+1)+' / 16';
 }
 
-// ── SIMULATION ────────────────────────────────────────────────────────────
+function buildFlowBar(){
+  const bar=document.getElementById('flow-bar'); bar.innerHTML='';
+  let nodes=[];
+  if(algo==='des')    nodes=[{id:'fn-0',l:'Input'},{id:'fn-1',l:'IP'},{id:'fn-2',l:'16 rounds'},{id:'fn-3',l:'FP'},{id:'fn-4',l:'Output'}];
+  else if(algo==='2des') nodes=[{id:'fn-0',l:'Input'},{id:'fn-1',l:'DES (K1)'},{id:'fn-2',l:'C1'},{id:'fn-3',l:'DES (K2)'},{id:'fn-4',l:'Output'}];
+  else nodes=[{id:'fn-0',l:'Input'},{id:'fn-1',l:'E(K1)'},{id:'fn-2',l:'C1'},{id:'fn-3',l:'D(K2)'},{id:'fn-4',l:'C2'},{id:'fn-5',l:'E(K3)'},{id:'fn-6',l:'Output'}];
+  nodes.forEach((n,i)=>{
+    if(i>0){const a=document.createElement('div');a.className='flow-arrow';bar.appendChild(a);}
+    const d=document.createElement('div');d.className='flow-node';d.id=n.id;d.textContent=n.l;bar.appendChild(d);
+  });
+}
+
+function fn(id,cls){const el=document.getElementById(id);if(el)el.className='flow-node '+cls;}
+
+function highlightFlow(phaseIdx,roundIdx){
+  const total=allSteps.length;
+  const done=phaseIdx>0||(phaseIdx===0&&roundIdx>=0);
+  fn('fn-0','done');
+  if(algo==='des'){
+    fn('fn-1','done');fn('fn-2','active');fn('fn-3','');fn('fn-4','');
+  } else if(algo==='2des'){
+    if(phaseIdx===0){fn('fn-1','active');fn('fn-2','');fn('fn-3','');fn('fn-4','');}
+    else{fn('fn-1','done');fn('fn-2','done');fn('fn-3','active');fn('fn-4','');}
+  } else {
+    if(phaseIdx===0){fn('fn-1','active');fn('fn-2','');fn('fn-3','');fn('fn-4','');fn('fn-5','');fn('fn-6','');}
+    else if(phaseIdx===1){fn('fn-1','done');fn('fn-2','done');fn('fn-3','active');fn('fn-4','');fn('fn-5','');fn('fn-6','');}
+    else{fn('fn-1','done');fn('fn-2','done');fn('fn-3','done');fn('fn-4','done');fn('fn-5','active');fn('fn-6','');}
+  }
+}
+
+// ── RUN ───────────────────────────────────────────────────────────────────
 function runSim(){
+  resetSim(true);
   const pt=document.getElementById('pt').value.slice(0,8).padEnd(8,' ');
-  const key=document.getElementById('key').value.slice(0,8).padEnd(8,' ');
-  sim=runDES(pt,key,mode==='decrypt');
+  const dec=mode==='decrypt';
+  const kc=document.getElementById('key-compare');
+
+  if(algo==='des'){
+    const k1=document.getElementById('key1').value.slice(0,8).padEnd(8,' ');
+    sim=runDES(pt,k1,dec);
+    document.getElementById('algo-tag').textContent='DES';
+    document.getElementById('algo-tag').className='tag info';
+    document.getElementById('key-strength-note').textContent='Effective key strength: 56 bits. Brute-forceable with modern hardware.';
+    kc.style.display='none';
+  } else if(algo==='2des'){
+    const k1=document.getElementById('key1-2').value.slice(0,8).padEnd(8,' ');
+    const k2=document.getElementById('key2-2').value.slice(0,8).padEnd(8,' ');
+    sim=run2DES(pt,k1,k2,dec);
+    document.getElementById('algo-tag').textContent='2DES';
+    document.getElementById('algo-tag').className='tag purple';
+    document.getElementById('key-strength-note').textContent='Effective key strength: ~57 bits (meet-in-the-middle attack). 112-bit key material wasted.';
+    kc.style.display='grid'; kc.style.gridTemplateColumns='1fr 1fr';
+    kc.innerHTML=`<div class="key-box"><div class="key-label">K1</div><div class="key-val">${k1.trim()}</div></div><div class="key-box"><div class="key-label">K2</div><div class="key-val">${k2.trim()}</div></div>`;
+  } else {
+    const k1=document.getElementById('key1-3').value.slice(0,8).padEnd(8,' ');
+    const k2=document.getElementById('key2-3').value.slice(0,8).padEnd(8,' ');
+    const k3=document.getElementById('key3-3').value.slice(0,8).padEnd(8,' ');
+    sim=run3DES(pt,k1,k2,k3,dec);
+    document.getElementById('algo-tag').textContent='3DES-EDE';
+    document.getElementById('algo-tag').className='tag coral';
+    document.getElementById('key-strength-note').textContent='Effective key strength: 112 bits. EDE pattern: Encrypt(K1) → Decrypt(K2) → Encrypt(K3). NIST deprecated 2023.';
+    kc.style.display='grid'; kc.style.gridTemplateColumns='1fr 1fr 1fr';
+    kc.innerHTML=`<div class="key-box"><div class="key-label">K1 (E)</div><div class="key-val">${k1.trim()}</div></div><div class="key-box"><div class="key-label">K2 (D)</div><div class="key-val">${k2.trim()}</div></div><div class="key-box"><div class="key-label">K3 (E)</div><div class="key-val">${k3.trim()}</div></div>`;
+  }
+
+  // Build flat step list
+  allSteps=[];
+  sim.phases.forEach((ph,pi)=>ph.steps.forEach((_,ri)=>allSteps.push({phaseIdx:pi,roundIdx:ri})));
   cur=-1;
 
-  document.getElementById('input-card').style.display='';
-  document.getElementById('ip-card').style.display='';
-  document.getElementById('rounds-card').style.display='';
-  document.getElementById('sbox-card').style.display='none';
-  document.getElementById('out-card').style.display='none';
+  buildFlowBar();
 
+  // Show input
+  document.getElementById('input-card').style.display='';
   renderBits(sim.inputBits,'input-bits');
   document.getElementById('input-hex-tag').textContent=bitsToHex(sim.inputBits);
-  renderBits(sim.ipBits,'ip-bits');
-  document.getElementById('ip-l').textContent=bitsToHex(sim.ipL);
-  document.getElementById('ip-r').textContent=bitsToHex(sim.ipR);
-  buildRoundRows();
-  updateProgress();
-  setFlowStage(1);
-  setStatus('Ready — step or play',false);
 
-  ['play-btn','next-btn','prev-btn','reset-btn'].forEach(id=>{
-    document.getElementById(id).disabled=false;
-  });
+  // Phase 1 always
+  const ph0=sim.phases[0];
+  document.getElementById('phase1-section').style.display='';
+  document.getElementById('phase1-badge').textContent=ph0.label;
+  renderBits(ph0.ipBits,'ip-bits');
+  document.getElementById('ip-l').textContent=bitsToHex(ph0.ipL);
+  document.getElementById('ip-r').textContent=bitsToHex(ph0.ipR);
+  buildRoundRows('rounds-list','rr0-');
+
+  if(sim.phases.length>=2){
+    document.getElementById('phase2-section').style.display='';
+    document.getElementById('phase2-badge').textContent=sim.phases[1].label;
+    buildRoundRows('rounds2-list','rr1-');
+  }
+  if(sim.phases.length>=3){
+    document.getElementById('phase3-section').style.display='';
+    document.getElementById('phase3-badge').textContent=sim.phases[2].label;
+    buildRoundRows('rounds3-list','rr2-');
+  }
+
+  updateProgress();
+  fn('fn-0','active');
+  setStatus('Ready — step or play',false);
+  ['play-btn','next-btn','prev-btn','reset-btn'].forEach(id=>document.getElementById(id).disabled=false);
   document.getElementById('play-btn').textContent='Play';
+  updateInfoBox();
 }
 
-function applyStep(i){
-  if(!sim) return;
-  const step=sim.steps[i];
-  for(let j=0;j<i;j++) updateRoundRow(j,sim.steps[j],'done');
-  updateRoundRow(i,step,'active');
-  for(let j=i+1;j<16;j++){
-    const rr=document.getElementById('rr-'+j);
-    const lr=document.getElementById('rr-lr-'+j);
-    if(rr){rr.className='round-row';lr.innerHTML='<span style="color:var(--text3)">waiting…</span>';}
+// ── STEP ──────────────────────────────────────────────────────────────────
+function applyStep(idx){
+  if(!sim||idx<0||idx>=allSteps.length)return;
+  const{phaseIdx,roundIdx}=allSteps[idx];
+  const phase=sim.phases[phaseIdx];
+  const step=phase.steps[roundIdx];
+  const prefix=PREFIXES[phaseIdx];
+  const tagId=TAG_IDS[phaseIdx];
+
+  // Update current phase round rows
+  for(let j=0;j<roundIdx;j++) updRR(prefix,j,phase.steps[j],'done');
+  updRR(prefix,roundIdx,step,'active');
+  clearRR(prefix,roundIdx+1);
+
+  // Mark completed earlier phases
+  for(let p=0;p<phaseIdx;p++){
+    sim.phases[p].steps.forEach((s,i)=>updRR(PREFIXES[p],i,s,'done'));
+    document.getElementById(TAG_IDS[p]).textContent='16 / 16';
   }
-  renderSBox(step,i+1);
+  // Reset future phases
+  for(let p=phaseIdx+1;p<sim.phases.length;p++){
+    clearRR(PREFIXES[p],0);
+    document.getElementById(TAG_IDS[p]).textContent='0 / 16';
+  }
+
+  document.getElementById(tagId).textContent=(roundIdx+1)+' / 16';
+
+  // Show intermediate cards only when a phase completes
+  document.getElementById('inter1-card').style.display='none';
+  document.getElementById('inter2-card').style.display='none';
+  document.getElementById('out-card').style.display='none';
+
+  if(phaseIdx>=1){
+    document.getElementById('inter1-card').style.display='';
+    document.getElementById('inter1-hex').textContent=bitsToHex(sim.phases[0].outputBits);
+    renderBits(sim.phases[0].outputBits,'inter1-bits');
+  }
+  if(phaseIdx>=2){
+    document.getElementById('inter2-card').style.display='';
+    document.getElementById('inter2-hex').textContent=bitsToHex(sim.phases[1].outputBits);
+    renderBits(sim.phases[1].outputBits,'inter2-bits');
+  }
+
+  renderSBox(step,roundIdx+1);
   updateProgress();
-  setFlowStage(2);
-  document.getElementById('cur-round-info').innerHTML=
-    `Round ${i+1}<br>L: ${bitsToHex(step.l)}<br>R: ${bitsToHex(step.r)}`;
+  highlightFlow(phaseIdx,roundIdx);
+  document.getElementById('cur-round-info').innerHTML=`Phase ${phaseIdx+1}, Round ${roundIdx+1}<br>L: ${bitsToHex(step.l)}<br>R: ${bitsToHex(step.r)}`;
 }
 
 function nextStep(){
-  if(!sim) return;
+  if(!sim)return;
   cur++;
-  if(cur>=16){finishSim();return;}
+  if(cur>=allSteps.length){finishSim();return;}
   applyStep(cur);
 }
 
 function prevStep(){
-  if(!sim||cur<=0) return;
+  if(!sim||cur<=0)return;
   document.getElementById('out-card').style.display='none';
   cur--;
   applyStep(cur);
 }
 
 function finishSim(){
-  sim.steps.forEach((s,i)=>updateRoundRow(i,s,'done'));
-  setFlowStage(4);
-  setStatus('Complete',true);
+  sim.phases.forEach((ph,pi)=>{
+    ph.steps.forEach((s,i)=>updRR(PREFIXES[pi],i,s,'done'));
+    document.getElementById(TAG_IDS[pi]).textContent='16 / 16';
+  });
+  if(sim.phases.length>=2){
+    document.getElementById('inter1-card').style.display='';
+    document.getElementById('inter1-hex').textContent=bitsToHex(sim.phases[0].outputBits);
+    renderBits(sim.phases[0].outputBits,'inter1-bits');
+  }
+  if(sim.phases.length>=3){
+    document.getElementById('inter2-card').style.display='';
+    document.getElementById('inter2-hex').textContent=bitsToHex(sim.phases[1].outputBits);
+    renderBits(sim.phases[1].outputBits,'inter2-bits');
+  }
+  document.getElementById('sbox-card').style.display='none';
   document.getElementById('out-card').style.display='';
   document.getElementById('final-hex').textContent=bitsToHex(sim.outputBits);
   renderBits(sim.outputBits,'out-bits');
-  document.getElementById('sbox-card').style.display='none';
+  document.querySelectorAll('.flow-node').forEach(n=>n.className='flow-node done');
+  cur=allSteps.length;
   updateProgress();
-  document.getElementById('cur-round-info').textContent='All 16 rounds done';
+  document.getElementById('cur-round-info').textContent='All phases complete';
+  setStatus('Complete','done');
   stopPlay();
-  document.getElementById('dot').className='dot done';
 }
 
-function togglePlay(){
-  if(playing) stopPlay(); else startPlay();
-}
+function togglePlay(){if(playing)stopPlay();else startPlay();}
 
 function startPlay(){
   playing=true;
@@ -610,32 +886,34 @@ function startPlay(){
   setStatus('Playing…','run');
   const ms=+document.getElementById('speed').value;
   ticker=setInterval(()=>{
-    if(cur>=15){finishSim();return;}
+    if(cur>=allSteps.length-1){finishSim();return;}
     nextStep();
   },ms);
 }
 
 function stopPlay(){
-  playing=false;
-  clearInterval(ticker);
+  playing=false; clearInterval(ticker);
   document.getElementById('play-btn').textContent='Play';
-  if(cur>=0&&cur<16) setStatus('Paused',false);
+  if(sim&&cur>=0&&cur<allSteps.length) setStatus('Paused',false);
 }
 
-function resetSim(){
-  stopPlay();
-  cur=-1; sim=null;
-  ['input-card','ip-card','rounds-card','sbox-card','out-card'].forEach(id=>{
-    document.getElementById(id).style.display='none';
+function resetSim(soft){
+  stopPlay(); cur=-1; allSteps=[]; sim=null;
+  ['input-card','phase1-section','phase2-section','phase3-section',
+   'sbox-card','inter1-card','inter2-card','out-card'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
   });
-  ['play-btn','next-btn','prev-btn','reset-btn'].forEach(id=>{
-    document.getElementById(id).disabled=true;
-  });
-  setFlowStage(-1);
-  setStatus('Ready',false);
+  document.getElementById('key-compare').style.display='none';
   document.getElementById('cur-round-info').textContent='—';
   document.getElementById('prog').style.width='0';
+  setStatus('Ready',false);
+  if(!soft){
+    ['play-btn','next-btn','prev-btn','reset-btn'].forEach(id=>document.getElementById(id).disabled=true);
+  }
 }
+
+// Init
+updateInfoBox();
 </script>
 </body>
 </html>
